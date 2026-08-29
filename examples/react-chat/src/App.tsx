@@ -14,7 +14,7 @@ export function App() {
       brand="Rebyte"
       agentName="SDK Test Agent"
       welcomeTitle="One agent. Any interface."
-      welcomeDescription="This UI is optional. The Responses client and headless React state work without it."
+      welcomeDescription="The server uses the official OpenAI SDK. This UI is optional."
     />
   )
 }

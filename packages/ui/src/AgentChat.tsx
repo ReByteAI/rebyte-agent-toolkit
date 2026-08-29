@@ -92,7 +92,7 @@ export function AgentChatView({
       <aside className="rb-sidebar">
         <div className="rb-brand-row">
           <span className="rb-brand">{brand}</span>
-          <span className="rb-product-tag">SDK</span>
+          <span className="rb-product-tag">UI</span>
         </div>
         <button className="rb-new" onClick={() => chat.reset()}>
           <span aria-hidden="true">＋</span> New conversation

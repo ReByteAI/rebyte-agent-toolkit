@@ -1,6 +1,6 @@
 import '../load-env.js'
 import assert from 'node:assert/strict'
-import { Rebyte, type ResponseStreamEvent } from '@rebyte/agent-sdk'
+import OpenAI from 'openai'
 
 const apiKey = process.env.REBYTE_API_KEY
 const agentId = process.env.REBYTE_AGENT_ID
@@ -8,46 +8,59 @@ const baseURL = process.env.REBYTE_API_URL ?? process.env.REBYTE_BASE_URL
 if (!apiKey || !agentId) {
   throw new Error('Set REBYTE_API_KEY and REBYTE_AGENT_ID to run the live smoke test')
 }
+const model = agentId
 
-const client = new Rebyte({
+const client = new OpenAI({
   apiKey,
   ...(baseURL ? { baseURL } : {}),
 })
-const conversation = client.conversation({ model: agentId })
+let conversationId: string | null = null
 
 async function runTurn(input: string) {
-  const events: ResponseStreamEvent[] = []
+  const eventTypes: string[] = []
   let streamedText = ''
-  const stream = await conversation.stream(input)
+  let response: OpenAI.Responses.Response | null = null
+  const stream = await client.responses.create({
+    model,
+    input,
+    stream: true,
+    ...(conversationId ? { conversation: conversationId } : {}),
+  })
   for await (const event of stream) {
-    events.push(event)
+    eventTypes.push(event.type)
     if (event.type === 'response.output_text.delta' && typeof event.delta === 'string') {
       streamedText += event.delta
     }
+    if (event.type === 'response.completed') response = event.response
+    if (event.type === 'response.failed') {
+      throw new Error(event.response.error?.message ?? 'Response failed')
+    }
   }
-  const response = await stream.finalResponse()
+  assert.ok(response, 'Stream ended without response.completed')
   assert.equal(response.status, 'completed')
   assert.equal(response.output_text, streamedText)
-  assert.ok(events.some((event) => event.type === 'response.created'))
-  assert.ok(events.some((event) => event.type === 'response.output_text.delta'))
-  assert.equal(events.at(-1)?.type, 'response.completed')
-  return { response, eventCount: events.length }
+  assert.ok(eventTypes.includes('response.created'))
+  assert.ok(eventTypes.includes('response.output_text.delta'))
+  assert.equal(eventTypes.at(-1), 'response.completed')
+  assert.ok(response.conversation?.id, 'Response did not include a Conversation ID')
+  conversationId = response.conversation.id
+  return { response, eventCount: eventTypes.length }
 }
 
 const first = await runTurn('Reply with exactly SDK_STREAM_OK and nothing else.')
 assert.match(first.response.output_text, /SDK_STREAM_OK/)
-assert.equal(conversation.id, first.response.conversation.id)
+assert.equal(conversationId, first.response.conversation?.id)
 
 const second = await runTurn('Reply with exactly SDK_CONTEXT_OK and nothing else.')
 assert.match(second.response.output_text, /SDK_CONTEXT_OK/)
-assert.equal(second.response.conversation.id, first.response.conversation.id)
+assert.equal(second.response.conversation?.id, first.response.conversation?.id)
 assert.equal(second.response.previous_response_id, null)
 
 console.log(JSON.stringify({
   ok: true,
   firstResponseId: first.response.id,
   secondResponseId: second.response.id,
-  conversationId: conversation.id,
+  conversationId,
   firstEventCount: first.eventCount,
   secondEventCount: second.eventCount,
 }, null, 2))

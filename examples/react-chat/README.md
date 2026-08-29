@@ -1,6 +1,9 @@
 # React chat example
 
-This example is a thin React client plus a same-origin Hono proxy. It demonstrates the intended production boundary: the browser sends input and its stable `conversation` ID; the server supplies the organization API key and Agent public ID.
+This example is a thin React client plus a same-origin Hono proxy. The browser
+sends input and its stable `conversation` ID. The server supplies the
+organization API key and Agent ID, then calls Rebyte with the official OpenAI
+SDK.
 
 ```sh
 cp .env.example .env.local

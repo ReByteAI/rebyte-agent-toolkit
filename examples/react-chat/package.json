@@ -12,9 +12,9 @@
   "dependencies": {
     "@hono/node-server": "^1.19.9",
     "@rebyte/agent-react": "workspace:*",
-    "@rebyte/agent-sdk": "workspace:*",
     "@rebyte/agent-ui": "workspace:*",
     "hono": "^4.9.9",
+    "openai": "^6.34.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

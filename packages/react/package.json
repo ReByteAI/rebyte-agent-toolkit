@@ -29,9 +29,6 @@
     "typecheck": "tsc --noEmit"
   },
   "publishConfig": { "access": "public" },
-  "dependencies": {
-    "@rebyte/agent-sdk": "workspace:*"
-  },
   "peerDependencies": {
     "react": ">=18.2.0"
   },

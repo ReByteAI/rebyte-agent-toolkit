@@ -1,93 +1,80 @@
-# Rebyte Agent SDK
+# Rebyte Agent Toolkit
 
-Build managed Rebyte Agents into a server or React application.
+Configure managed Rebyte Agents and add them to React applications.
 
-Rebyte owns the Agent execution loop, durable Conversations, tool calls, and
-streaming protocol. This repository provides the client layers; it does not
-force an application UI.
+Rebyte does not ship a second Responses client. Server applications execute an
+Agent with the official OpenAI SDK. This repository contains only Rebyte's
+management CLI and optional browser UI layers.
 
 - [Agent API documentation](https://rebyte.ai/docs/agent-api/overview)
-- [Quickstart](https://rebyte.ai/docs/agent-api/quickstart)
+- [Getting started](https://rebyte.ai/docs/agent-api/quickstart)
 - [Create an API key](https://app.rebyte.ai/settings/api-keys)
 
-## Status
+## Two interfaces
 
-Packages are distributed as public, token-free `.tgz` assets on
-[GitHub Releases](https://github.com/ReByteAI/rebyte-agent-sdk/releases).
-They are not published to an npm registry.
+| Task | Interface |
+|---|---|
+| Execute an Agent | Official OpenAI SDK and Rebyte `/v1/responses` |
+| Configure an Agent | Rebyte CLI, `agent.toml`, or Agent REST API |
+| Add headless React chat state | `@rebyte/agent-react` |
+| Add the optional chat UI | `@rebyte/agent-ui` |
+
+## Execute with the OpenAI SDK
 
 ```sh
-pnpm add https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-sdk.tgz
+pnpm add openai
 ```
 
-The stable asset name always resolves to the latest Release. Use a versioned
-Release URL only when the application must pin an exact SDK version.
-
-## Packages
-
-Install only the layer your product needs:
-
-| Package | Owns | Does not own |
-|---|---|---|
-| `@rebyte/agent-sdk` | Responses client, durable Conversations, SSE events, response accumulation | React, UI, application auth |
-| `@rebyte/agent-react` | Headless chat state and browser/server transports | Markup and styles |
-| `@rebyte/agent-ui` | Optional App Kit-style chat and execution inspector | API keys and backend policy |
-| `@rebyte/cli` | `agent.toml` validation, create, apply, and export | Agent execution |
-
-## Core SDK
-
 ```ts
-import { Rebyte } from '@rebyte/agent-sdk'
+import OpenAI from 'openai'
 
-const client = new Rebyte({
-  apiKey: process.env.REBYTE_API_KEY!,
+const client = new OpenAI({
+  apiKey: process.env.REBYTE_API_KEY,
+  baseURL: 'https://api.rebyte.ai/v1',
 })
 
 const stream = await client.responses.create({
-  model: process.env.REBYTE_AGENT_ID!,
+  model: process.env.REBYTE_AGENT_ID,
   input: 'Inspect this repository and summarize it.',
   stream: true,
 })
 
+let conversation
 for await (const event of stream) {
   if (event.type === 'response.output_text.delta') {
     process.stdout.write(event.delta)
   }
+  if (event.type === 'response.completed') {
+    conversation = event.response.conversation?.id
+  }
 }
-
-const response = await stream.finalResponse()
-console.log(response.conversation.id)
 ```
 
-`model` is the Rebyte Agent ID. Use the Conversation helper for multiple turns:
+`model` is the Rebyte Agent ID. Pass the returned `conversation` on later
+turns. Rebyte supports a focused OpenAI Responses subset; Agent tools, Skills,
+MCP servers, and credentials come from the managed Agent configuration.
 
-```ts
-const conversation = client.conversation({
-  model: process.env.REBYTE_AGENT_ID!,
-})
+## Configure with the Rebyte CLI
 
-await conversation.send('Remember that the deployment color is blue.')
-await conversation.send('What is the deployment color?')
+The CLI is a public, token-free GitHub Release asset.
 
-console.log(conversation.id)
+```sh
+pnpm add --global https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-cli.tgz
+export REBYTE_API_KEY="rbk_..."
+rebyte agent create -f agent.toml
 ```
 
-One stable Conversation ID owns every turn. The helper does not build a
-client-side `previous_response_id` chain.
+The CLI validates, creates, applies, and exports organization-scoped API
+Agents. It does not execute Responses.
 
 ## Headless React
 
-Install Core and React together from the same Release:
-
 ```sh
-pnpm add \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-sdk.tgz \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-react.tgz
+pnpm add https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-react.tgz
 ```
 
-The browser talks to an endpoint in your application. That endpoint
-authenticates the user and forwards Rebyte's SSE stream while keeping the
-organization API key on the server.
+The browser talks to an endpoint in your application. That endpoint uses the
+official OpenAI SDK and keeps the organization API key on the server.
 
 ```tsx
 import { useMemo } from 'react'
@@ -117,13 +104,13 @@ function Chat() {
 }
 ```
 
-## Optional UI
+The React package contains browser state and SSE reduction only. It is not a
+second server-side Responses client.
 
-Install all three runtime layers from the same Release:
+## Optional UI
 
 ```sh
 pnpm add \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-sdk.tgz \
   https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-react.tgz \
   https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-ui.tgz
 ```
@@ -143,20 +130,6 @@ export function App() {
 }
 ```
 
-Use `AgentChatView` with the state returned by `useRebyteChat` when you need a
-controlled component.
-
-## Rebyte CLI
-
-```sh
-pnpm add --global https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-cli.tgz
-export REBYTE_API_KEY="rbk_..."
-rebyte agent create -f agent.toml
-```
-
-The CLI manages organization-scoped API Agents and supports `dev`, `test`,
-`prod`, or an exact `--base-url`.
-
 ## Run the example
 
 Requires Node 22+ and pnpm 10.
@@ -169,32 +142,14 @@ cp examples/react-chat/.env.example examples/react-chat/.env.local
 pnpm dev
 ```
 
-Open <http://127.0.0.1:4100>. The backend on port `4101` forwards the Responses
-event stream without exposing the organization key to the browser.
-
-Verify a real two-turn stream with one stable Conversation:
+Open <http://127.0.0.1:4100>. The server on port `4101` uses the official
+OpenAI SDK and forwards the SSE body without exposing the organization key.
 
 ```sh
 pnpm test:live
 ```
 
-## Protocol scope
-
-The initial client implements Rebyte's focused OpenAI Responses subset:
-
-- synchronous Responses and live SSE;
-- stable `conversation` continuity;
-- durable Response retrieval;
-- standard text and MCP call events;
-- additive Rebyte tool-progress events;
-- Conversation create, retrieve, list, interrupt, and delete.
-
-Agent management remains available through the REST API and Rebyte CLI.
-Request-level OpenAI tools, file and image inputs, structured output, and
-background mode are outside the current SDK contract.
-
-See [docs/architecture.md](./docs/architecture.md) for package boundaries and
-[examples/react-chat](./examples/react-chat/README.md) for the proxy contract.
+See [docs/architecture.md](./docs/architecture.md) for the trust boundary.
 
 ## Development
 

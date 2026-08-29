@@ -1,9 +1,8 @@
 import {
-  Rebyte,
-  RebyteAPIError,
+  AgentTransportError,
   parseResponseEventStream,
   type ResponseStreamEvent,
-} from '@rebyte/agent-sdk'
+} from './responses.js'
 
 export interface AgentTransportRequest {
   input: string
@@ -26,7 +25,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-async function fetchError(response: Response): Promise<RebyteAPIError> {
+async function fetchError(response: Response): Promise<AgentTransportError> {
   const text = await response.text()
   let body: unknown = text
   try {
@@ -42,7 +41,7 @@ async function fetchError(response: Response): Promise<RebyteAPIError> {
       ? record.message
       : text.trim() || `HTTP ${response.status}`
   const code = nested && typeof nested.code === 'string' ? nested.code : null
-  return new RebyteAPIError(response.status, message, code, body)
+  return new AgentTransportError(response.status, message, code, body)
 }
 
 /**
@@ -89,29 +88,6 @@ export function createFetchTransport(options: FetchTransportOptions): AgentTrans
         body: JSON.stringify({ conversation: conversationId }),
       })
       if (!response.ok) throw await fetchError(response)
-    },
-  }
-}
-
-/** Direct transport for trusted server runtimes and tests. Never bundle an org key in a browser. */
-export function createRebyteTransport(options: {
-  client: Rebyte
-  model: string
-}): AgentTransport {
-  if (!options.model) throw new Error('model is required')
-  return {
-    stream(request) {
-      return options.client.responses.create({
-        model: options.model,
-        input: request.input,
-        stream: true,
-        ...(request.conversationId
-          ? { conversation: request.conversationId }
-          : {}),
-      }, { signal: request.signal })
-    },
-    async interrupt(conversationId) {
-      await options.client.conversations.interrupt(conversationId)
     },
   }
 }

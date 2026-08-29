@@ -1,6 +1,5 @@
 export {
   createFetchTransport,
-  createRebyteTransport,
   type AgentTransport,
   type AgentTransportRequest,
   type FetchTransportOptions,
@@ -11,3 +10,10 @@ export {
   type RebyteChat,
   type UseRebyteChatOptions,
 } from './use-rebyte-chat.js'
+export {
+  AgentTransportError,
+  type ResponseObject,
+  type ResponseState,
+  type ResponseStreamEvent,
+  type ToolCallState,
+} from './responses.js'

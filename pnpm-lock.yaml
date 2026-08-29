@@ -29,15 +29,15 @@ importers:
       '@rebyte/agent-react':
         specifier: workspace:*
         version: link:../../packages/react
-      '@rebyte/agent-sdk':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@rebyte/agent-ui':
         specifier: workspace:*
         version: link:../../packages/ui
       hono:
         specifier: ^4.9.9
         version: 4.13.5
+      openai:
+        specifier: ^6.34.0
+        version: 6.49.0(zod@3.25.76)
       react:
         specifier: ^19.2.0
         version: 19.2.8
@@ -71,17 +71,7 @@ importers:
         specifier: ^0.27.2
         version: 0.27.7
 
-  packages/core:
-    devDependencies:
-      tsup:
-        specifier: ^8.5.0
-        version: 8.5.1(postcss@8.5.26)(tsx@4.23.12)(typescript@5.9.3)
-
   packages/react:
-    dependencies:
-      '@rebyte/agent-sdk':
-        specifier: workspace:*
-        version: link:../core
     devDependencies:
       '@types/react':
         specifier: ^19.2.0
@@ -1135,6 +1125,26 @@ packages:
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
+
+  openai@6.49.0:
+    resolution: {integrity: sha512-aYCc0C6L864eR6WSYIwQGyXriw/nIyZx0ObvhzOEVuk0zoBDpynjSbrionWI7q65B5H8jJX0DXR9snEzM6bfPg==}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   parse-entities@4.0.2:
     resolution: {integrity: sha512-GG2AQYWoLgL877gQIKeRPGO1xF9+eG1ujIb5soS5gPvLQ1y2o8FL90w2QWNdf9I361Mpp7726c+lj3U0qK1uGw==}
@@ -2513,6 +2523,10 @@ snapshots:
   node-releases@2.0.54: {}
 
   object-assign@4.1.1: {}
+
+  openai@6.49.0(zod@3.25.76):
+    optionalDependencies:
+      zod: 3.25.76
 
   parse-entities@4.0.2:
     dependencies:

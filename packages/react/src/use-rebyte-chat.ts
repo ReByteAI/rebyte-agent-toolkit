@@ -2,10 +2,10 @@ import { useCallback, useReducer, useRef } from 'react'
 import {
   createResponseState,
   reduceResponseState,
-  type RebyteResponse,
+  type ResponseObject,
   type ResponseState,
   type ResponseStreamEvent,
-} from '@rebyte/agent-sdk'
+} from './responses.js'
 import type { AgentTransport } from './transport.js'
 
 export interface AgentChatMessage {
@@ -22,7 +22,7 @@ export interface UseRebyteChatOptions {
   initialConversationId?: string
   initialMessages?: AgentChatMessage[]
   onEvent?: (event: ResponseStreamEvent) => void
-  onResponse?: (response: RebyteResponse) => void
+  onResponse?: (response: ResponseObject) => void
   onError?: (error: Error) => void
 }
 
@@ -31,7 +31,7 @@ export interface RebyteChat {
   status: 'idle' | 'streaming' | 'error'
   error: Error | null
   conversationId: string | null
-  send: (input: string) => Promise<RebyteResponse | null>
+  send: (input: string) => Promise<ResponseObject | null>
   stop: () => Promise<void>
   reset: (options?: { conversationId?: string; messages?: AgentChatMessage[] }) => void
 }
@@ -50,9 +50,9 @@ type Action =
   | { type: 'cancel'; assistantId: string }
   | { type: 'reset'; messages: AgentChatMessage[]; conversationId: string | null }
 
-function eventResponse(event: ResponseStreamEvent): RebyteResponse | null {
+function eventResponse(event: ResponseStreamEvent): ResponseObject | null {
   return typeof event.response === 'object' && event.response !== null
-    ? event.response as RebyteResponse
+    ? event.response as ResponseObject
     : null
 }
 
@@ -169,7 +169,7 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
   const abortRef = useRef<AbortController | null>(null)
   const assistantIdRef = useRef<string | null>(null)
 
-  const send = useCallback(async (input: string): Promise<RebyteResponse | null> => {
+  const send = useCallback(async (input: string): Promise<ResponseObject | null> => {
     const text = input.trim()
     if (!text) throw new Error('input is required')
     if (abortRef.current) throw new Error('A response is already streaming')
@@ -181,7 +181,7 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
     assistantIdRef.current = assistantId
     dispatch({ type: 'start', userId, assistantId, input: text })
 
-    let terminal: RebyteResponse | null = null
+    let terminal: ResponseObject | null = null
     try {
       const stream = await transport.stream({
         input: text,

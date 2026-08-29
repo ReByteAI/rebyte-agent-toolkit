@@ -2,19 +2,23 @@ import '../load-env.js'
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
-import { Rebyte, RebyteAPIError } from '@rebyte/agent-sdk'
+import OpenAI from 'openai'
 
 const apiKey = process.env.REBYTE_API_KEY
 const agentId = process.env.REBYTE_AGENT_ID
-const baseURL = process.env.REBYTE_API_URL ?? process.env.REBYTE_BASE_URL
+const baseURL = (
+  process.env.REBYTE_API_URL
+  ?? process.env.REBYTE_BASE_URL
+  ?? 'https://api.rebyte.ai/v1'
+).replace(/\/+$/, '')
 
 if (!apiKey || !agentId) {
   throw new Error('Set REBYTE_API_KEY and REBYTE_AGENT_ID before starting the example')
 }
 
-const client = new Rebyte({
+const client = new OpenAI({
   apiKey,
-  ...(baseURL ? { baseURL } : {}),
+  baseURL,
 })
 const app = new Hono()
 
@@ -34,14 +38,14 @@ app.post('/api/responses', async (context) => {
     return context.json({ error: { message: 'conversation must be a string' } }, 400)
   }
 
-  const stream = await client.responses.create({
+  const response = await client.responses.create({
     model: agentId,
     input,
     stream: true,
     ...(conversation ? { conversation } : {}),
-  }, { signal: context.req.raw.signal })
+  }, { signal: context.req.raw.signal }).asResponse()
 
-  return new Response(stream.response.body, {
+  return new Response(response.body, {
     headers: {
       'Cache-Control': 'no-cache, no-transform',
       'Content-Type': 'text/event-stream',
@@ -58,13 +62,27 @@ app.post('/api/conversations/interrupt', async (context) => {
   if (typeof conversation !== 'string' || !conversation) {
     return context.json({ error: { message: 'conversation must be a string' } }, 400)
   }
-  return context.json(await client.conversations.interrupt(conversation))
+  if (!conversation.startsWith('conv_') || conversation.length <= 5) {
+    return context.json({ error: { message: 'conversation must start with conv_' } }, 400)
+  }
+  const response = await fetch(
+    `${baseURL}/sessions/${encodeURIComponent(conversation.slice(5))}/interrupt`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: context.req.raw.signal,
+    },
+  )
+  return new Response(response.body, {
+    status: response.status,
+    headers: { 'Content-Type': response.headers.get('Content-Type') ?? 'application/json' },
+  })
 })
 
 app.onError((error, context) => {
-  if (error instanceof RebyteAPIError) {
+  if (error instanceof OpenAI.APIError) {
     return context.json({
-      error: { message: error.message, code: error.code },
+      error: { message: error.message, code: error.code ?? null },
     }, (error.status >= 400 && error.status < 600 ? error.status : 502) as ContentfulStatusCode)
   }
   console.error(error)
