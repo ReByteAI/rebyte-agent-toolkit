@@ -1,0 +1,49 @@
+{
+  "name": "@rebyte/agent-ui",
+  "version": "0.1.0",
+  "description": "Optional React chat UI for Rebyte Agents",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ReByteAI/rebyte-agent-sdk.git",
+    "directory": "packages/ui"
+  },
+  "homepage": "https://github.com/ReByteAI/rebyte-agent-sdk#readme",
+  "bugs": "https://github.com/ReByteAI/rebyte-agent-sdk/issues",
+  "engines": { "node": ">=22" },
+  "type": "module",
+  "sideEffects": ["./src/styles.css"],
+  "files": ["dist", "src/styles.css", "README.md"],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react --external react-dom",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": { "access": "public" },
+  "dependencies": {
+    "@rebyte/agent-react": "workspace:*",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0",
+    "react-dom": ">=18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tsup": "^8.5.0"
+  }
+}

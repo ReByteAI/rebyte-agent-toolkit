@@ -1,0 +1,27 @@
+{
+  "name": "rebyte-agent-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ReByteAI/rebyte-agent-sdk.git"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @rebyte/example-react-chat dev",
+    "test": "pnpm --filter @rebyte/agent-sdk test",
+    "test:live": "pnpm build && pnpm --filter @rebyte/example-react-chat test:live",
+    "typecheck": "pnpm --filter @rebyte/agent-sdk build && pnpm --filter @rebyte/agent-react build && pnpm --filter @rebyte/agent-ui build && pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.3"
+  }
+}
