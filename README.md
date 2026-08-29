@@ -17,8 +17,11 @@ Packages are distributed as public, token-free `.tgz` assets on
 They are not published to an npm registry.
 
 ```sh
-pnpm add https://github.com/ReByteAI/rebyte-agent-sdk/releases/download/v0.1.0/rebyte-agent-sdk-0.1.0.tgz
+pnpm add https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-sdk.tgz
 ```
+
+The stable asset name always resolves to the latest Release. Use a versioned
+Release URL only when the application must pin an exact SDK version.
 
 ## Packages
 
@@ -78,8 +81,8 @@ Install Core and React together from the same Release:
 
 ```sh
 pnpm add \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/download/v0.1.0/rebyte-agent-sdk-0.1.0.tgz \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/download/v0.1.0/rebyte-agent-react-0.1.0.tgz
+  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-sdk.tgz \
+  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-react.tgz
 ```
 
 The browser talks to an endpoint in your application. That endpoint
@@ -120,9 +123,9 @@ Install all three runtime layers from the same Release:
 
 ```sh
 pnpm add \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/download/v0.1.0/rebyte-agent-sdk-0.1.0.tgz \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/download/v0.1.0/rebyte-agent-react-0.1.0.tgz \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/download/v0.1.0/rebyte-agent-ui-0.1.0.tgz
+  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-sdk.tgz \
+  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-react.tgz \
+  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-ui.tgz
 ```
 
 ```tsx
@@ -146,7 +149,7 @@ controlled component.
 ## Rebyte CLI
 
 ```sh
-pnpm add --global https://github.com/ReByteAI/rebyte-agent-sdk/releases/download/v0.1.0/rebyte-cli-0.1.0.tgz
+pnpm add --global https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-cli.tgz
 export REBYTE_API_KEY="rbk_..."
 rebyte agent create -f agent.toml
 ```

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import {
+  copyFileSync,
   existsSync,
   mkdtempSync,
   mkdirSync,
@@ -27,10 +28,15 @@ if (existsSync(outputDirectory) && readdirSync(outputDirectory).length > 0) {
 mkdirSync(outputDirectory, { recursive: true })
 
 const packages = [
-  { directory: 'core', archive: `rebyte-agent-sdk-${version}.tgz` },
+  {
+    directory: 'core',
+    archive: `rebyte-agent-sdk-${version}.tgz`,
+    latestArchive: 'rebyte-agent-sdk.tgz',
+  },
   {
     directory: 'react',
     archive: `rebyte-agent-react-${version}.tgz`,
+    latestArchive: 'rebyte-agent-react.tgz',
     dependencies: {
       '@rebyte/agent-sdk': `${releaseBaseUrl}/rebyte-agent-sdk-${version}.tgz`,
     },
@@ -38,11 +44,16 @@ const packages = [
   {
     directory: 'ui',
     archive: `rebyte-agent-ui-${version}.tgz`,
+    latestArchive: 'rebyte-agent-ui.tgz',
     dependencies: {
       '@rebyte/agent-react': `${releaseBaseUrl}/rebyte-agent-react-${version}.tgz`,
     },
   },
-  { directory: 'cli', archive: `rebyte-cli-${version}.tgz` },
+  {
+    directory: 'cli',
+    archive: `rebyte-cli-${version}.tgz`,
+    latestArchive: 'rebyte-cli.tgz',
+  },
 ]
 
 for (const packageDefinition of packages) {
@@ -62,9 +73,15 @@ for (const packageDefinition of packages) {
   if (packageDefinition.dependencies) {
     rewriteDependencies(archivePath, packageDefinition.dependencies)
   }
+  copyFileSync(archivePath, join(outputDirectory, packageDefinition.latestArchive))
 }
 
-const archives = packages.map((packageDefinition) => packageDefinition.archive).sort()
+const archives = packages
+  .flatMap((packageDefinition) => [
+    packageDefinition.archive,
+    packageDefinition.latestArchive,
+  ])
+  .sort()
 const checksums = archives.map((archive) => {
   const digest = createHash('sha256')
     .update(readFileSync(join(outputDirectory, archive)))
