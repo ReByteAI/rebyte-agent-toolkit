@@ -1,0 +1,46 @@
+{
+  "name": "@rebyte/cli",
+  "version": "0.1.0",
+  "description": "Create and manage Rebyte Agents from agent.toml",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ReByteAI/rebyte-agent-sdk.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/ReByteAI/rebyte-agent-sdk#rebyte-cli",
+  "bugs": "https://github.com/ReByteAI/rebyte-agent-sdk/issues",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "bin": {
+    "rebyte": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit && esbuild src/cli.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/cli.js --banner:js='#!/usr/bin/env node' && chmod +x dist/cli.js",
+    "prepack": "pnpm run build",
+    "smoke": "node scripts/smoke.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "rebyte",
+    "agent",
+    "cli",
+    "toml"
+  ],
+  "dependencies": {
+    "smol-toml": "^1.8.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.2"
+  }
+}

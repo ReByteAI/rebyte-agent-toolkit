@@ -5,6 +5,7 @@ import { AgentChat } from '@rebyte/agent-ui'
 export function App() {
   const transport = useMemo(() => createFetchTransport({
     url: '/api/responses',
+    interruptUrl: '/api/conversations/interrupt',
   }), [])
 
   return (

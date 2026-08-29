@@ -17,10 +17,10 @@ export interface AgentChatProps {
   welcomeDescription?: string
   inspector?: boolean
   className?: string
-  initialPreviousResponseId?: string
+  initialConversationId?: string
 }
 
-export interface AgentChatViewProps extends Omit<AgentChatProps, 'transport' | 'initialPreviousResponseId'> {
+export interface AgentChatViewProps extends Omit<AgentChatProps, 'transport' | 'initialConversationId'> {
   chat: RebyteChat
 }
 
@@ -38,10 +38,10 @@ function assistantMessages(messages: AgentChatMessage[]): AgentChatMessage[] {
   return messages.filter((message) => message.role === 'assistant')
 }
 
-export function AgentChat({ transport, initialPreviousResponseId, ...props }: AgentChatProps) {
+export function AgentChat({ transport, initialConversationId, ...props }: AgentChatProps) {
   const chat = useRebyteChat({
     transport,
-    ...(initialPreviousResponseId ? { initialPreviousResponseId } : {}),
+    ...(initialConversationId ? { initialConversationId } : {}),
   })
   return <AgentChatView chat={chat} {...props} />
 }
@@ -107,7 +107,7 @@ export function AgentChatView({
         </div>
         <div className="rb-sidebar-spacer" />
         <div className="rb-sidebar-foot">
-          <span>{chat.previousResponseId ? `…${chat.previousResponseId.slice(-10)}` : 'New thread'}</span>
+          <span>{chat.conversationId ? `…${chat.conversationId.slice(-10)}` : 'New conversation'}</span>
           <button onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')} aria-label="Toggle color theme">
             {theme === 'light' ? '◐' : '◑'}
           </button>
@@ -159,7 +159,7 @@ export function AgentChatView({
             />
             <button
               className={running ? 'rb-stop' : 'rb-send'}
-              onClick={running ? chat.stop : submit}
+              onClick={running ? () => void chat.stop().catch(() => undefined) : submit}
               disabled={!running && !input.trim()}
               aria-label={running ? 'Stop response' : 'Send message'}
             >
@@ -219,7 +219,7 @@ function Inspector({ messages, apiLabel, agentName }: {
       </div>
       <dl className="rb-runtime-grid">
         <div><dt>Agent</dt><dd>{agentName}</dd></div>
-        <div><dt>Continuity</dt><dd>previous_response_id</dd></div>
+        <div><dt>Continuity</dt><dd>conversation</dd></div>
         <div><dt>Transport</dt><dd>Server-sent events</dd></div>
       </dl>
       {messages.length === 0 ? (

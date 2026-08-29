@@ -1,6 +1,11 @@
 export { Rebyte, ResponsesResource } from './client.js'
 export { RebyteAPIError } from './error.js'
 export { RebyteConversation } from './conversation.js'
+export {
+  ConversationsResource,
+  conversationIdFromSessionId,
+  sessionIdFromConversationId,
+} from './conversations.js'
 export { ResponseStream, type ResponseEventListener } from './stream.js'
 export { parseResponseEventStream } from './sse.js'
 export {
@@ -11,12 +16,16 @@ export {
 } from './accumulator.js'
 export type {
   ConversationCreateParams,
-  ConversationSnapshot,
+  ConversationInterruptResult,
+  ConversationList,
+  CreateConversationParams,
   CreateResponseParams,
   JsonPrimitive,
   JsonValue,
+  ListConversationsParams,
   KnownResponseStreamEvent,
   RebyteClientOptions,
+  RebyteConversationObject,
   RebyteResponse,
   RequestOptions,
   ResponseApiErrorEvent,

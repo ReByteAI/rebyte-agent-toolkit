@@ -36,16 +36,18 @@ async function runTurn(input: string) {
 
 const first = await runTurn('Reply with exactly SDK_STREAM_OK and nothing else.')
 assert.match(first.response.output_text, /SDK_STREAM_OK/)
-assert.equal(conversation.snapshot().previousResponseId, first.response.id)
+assert.equal(conversation.id, first.response.conversation.id)
 
 const second = await runTurn('Reply with exactly SDK_CONTEXT_OK and nothing else.')
 assert.match(second.response.output_text, /SDK_CONTEXT_OK/)
-assert.equal(second.response.previous_response_id, first.response.id)
+assert.equal(second.response.conversation.id, first.response.conversation.id)
+assert.equal(second.response.previous_response_id, null)
 
 console.log(JSON.stringify({
   ok: true,
   firstResponseId: first.response.id,
   secondResponseId: second.response.id,
+  conversationId: conversation.id,
   firstEventCount: first.eventCount,
   secondEventCount: second.eventCount,
 }, null, 2))

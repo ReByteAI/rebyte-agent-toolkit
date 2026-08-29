@@ -75,9 +75,9 @@ test('streams events once and exposes the final Response', async () => {
   assert.throws(() => stream[Symbol.asyncIterator](), /only be consumed once/)
 })
 
-test('conversation helper carries previous_response_id between sends', async () => {
+test('conversation helper carries one stable conversation id between sends', async () => {
   const bodies: unknown[] = []
-  const queued = [response('resp_first', null), response('resp_second', 'resp_first')]
+  const queued = [response('resp_first', null), response('resp_second', null)]
   const client = new Rebyte({
     apiKey: 'rbk_test',
     fetch: async (_url, init) => {
@@ -92,7 +92,11 @@ test('conversation helper carries previous_response_id between sends', async () 
   await conversation.send('second')
   assert.deepEqual(bodies, [
     { model: conversation.model, input: 'first' },
-    { model: conversation.model, input: 'second', previous_response_id: 'resp_first' },
+    {
+      model: conversation.model,
+      input: 'second',
+      conversation: 'conv_00000000-0000-0000-0000-000000000001',
+    },
   ])
-  assert.equal(conversation.snapshot().previousResponseId, 'resp_second')
+  assert.equal(conversation.id, 'conv_00000000-0000-0000-0000-000000000001')
 })

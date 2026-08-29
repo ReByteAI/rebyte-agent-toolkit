@@ -14,7 +14,8 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm --filter @rebyte/example-react-chat dev",
-    "test": "pnpm --filter @rebyte/agent-sdk test",
+    "pack:release": "node scripts/pack-release.mjs",
+    "test": "pnpm --filter @rebyte/agent-sdk test && pnpm --filter @rebyte/cli build && pnpm --filter @rebyte/cli smoke",
     "test:live": "pnpm build && pnpm --filter @rebyte/example-react-chat test:live",
     "typecheck": "pnpm --filter @rebyte/agent-sdk build && pnpm --filter @rebyte/agent-react build && pnpm --filter @rebyte/agent-ui build && pnpm -r typecheck"
   },

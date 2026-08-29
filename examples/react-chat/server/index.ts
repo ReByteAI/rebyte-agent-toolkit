@@ -26,19 +26,19 @@ app.post('/api/responses', async (context) => {
     return context.json({ error: { message: 'Request body must be an object' } }, 400)
   }
   const input = Reflect.get(body, 'input')
-  const previousResponseId = Reflect.get(body, 'previous_response_id')
+  const conversation = Reflect.get(body, 'conversation')
   if (typeof input !== 'string' || input.trim() === '') {
     return context.json({ error: { message: 'input must be a non-empty string' } }, 400)
   }
-  if (previousResponseId !== undefined && typeof previousResponseId !== 'string') {
-    return context.json({ error: { message: 'previous_response_id must be a string' } }, 400)
+  if (conversation !== undefined && typeof conversation !== 'string') {
+    return context.json({ error: { message: 'conversation must be a string' } }, 400)
   }
 
   const stream = await client.responses.create({
     model: agentId,
     input,
     stream: true,
-    ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
+    ...(conversation ? { conversation } : {}),
   }, { signal: context.req.raw.signal })
 
   return new Response(stream.response.body, {
@@ -48,6 +48,17 @@ app.post('/api/responses', async (context) => {
       'X-Accel-Buffering': 'no',
     },
   })
+})
+
+app.post('/api/conversations/interrupt', async (context) => {
+  const body: unknown = await context.req.json()
+  const conversation = typeof body === 'object' && body !== null
+    ? Reflect.get(body, 'conversation')
+    : undefined
+  if (typeof conversation !== 'string' || !conversation) {
+    return context.json({ error: { message: 'conversation must be a string' } }, 400)
+  }
+  return context.json(await client.conversations.interrupt(conversation))
 })
 
 app.onError((error, context) => {

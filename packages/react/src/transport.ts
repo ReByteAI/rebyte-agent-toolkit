@@ -7,15 +7,17 @@ import {
 
 export interface AgentTransportRequest {
   input: string
-  previousResponseId: string | null
+  conversationId: string | null
   signal: AbortSignal
 }
 export interface AgentTransport {
   stream(request: AgentTransportRequest): Promise<AsyncIterable<ResponseStreamEvent>>
+  interrupt(conversationId: string): Promise<void>
 }
 
 export interface FetchTransportOptions {
   url: string
+  interruptUrl: string
   fetch?: typeof globalThis.fetch
   headers?: Record<string, string> | (() => Promise<Record<string, string>> | Record<string, string>)
 }
@@ -49,6 +51,7 @@ async function fetchError(response: Response): Promise<RebyteAPIError> {
  */
 export function createFetchTransport(options: FetchTransportOptions): AgentTransport {
   if (!options.url) throw new Error('url is required')
+  if (!options.interruptUrl) throw new Error('interruptUrl is required')
   const doFetch = options.fetch ?? globalThis.fetch
   if (!doFetch) throw new Error('No fetch implementation is available')
 
@@ -66,8 +69,8 @@ export function createFetchTransport(options: FetchTransportOptions): AgentTrans
         },
         body: JSON.stringify({
           input: request.input,
-          ...(request.previousResponseId
-            ? { previous_response_id: request.previousResponseId }
+          ...(request.conversationId
+            ? { conversation: request.conversationId }
             : {}),
         }),
         signal: request.signal,
@@ -75,6 +78,17 @@ export function createFetchTransport(options: FetchTransportOptions): AgentTrans
       if (!response.ok) throw await fetchError(response)
       if (!response.body) throw new Error('Application response stream has no body')
       return parseResponseEventStream(response.body)
+    },
+    async interrupt(conversationId) {
+      const extraHeaders = typeof options.headers === 'function'
+        ? await options.headers()
+        : options.headers ?? {}
+      const response = await doFetch(options.interruptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...extraHeaders },
+        body: JSON.stringify({ conversation: conversationId }),
+      })
+      if (!response.ok) throw await fetchError(response)
     },
   }
 }
@@ -91,10 +105,13 @@ export function createRebyteTransport(options: {
         model: options.model,
         input: request.input,
         stream: true,
-        ...(request.previousResponseId
-          ? { previous_response_id: request.previousResponseId }
+        ...(request.conversationId
+          ? { conversation: request.conversationId }
           : {}),
       }, { signal: request.signal })
+    },
+    async interrupt(conversationId) {
+      await options.client.conversations.interrupt(conversationId)
     },
   }
 }

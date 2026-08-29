@@ -35,7 +35,7 @@ For trusted server-only code, `createRebyteTransport` can connect a `Rebyte` cli
 
 The core accumulator turns protocol events into immutable response state: current text, output items, tool calls, terminal response, error, and raw events. The React package composes that primitive into chat messages and cancellation. The UI renders the resulting state.
 
-Conversation continuity is only the latest successful Response ID. There is no SDK-side conversation database or version system. Applications that need persistence can store the ID and initialize either `client.conversation({ previousResponseId })` or `useRebyteChat({ initialPreviousResponseId })`.
+A Conversation is the durable Rebyte Session and keeps one stable `conv_…` ID across every turn. A Response is only one turn inside that Conversation. There is no SDK-side conversation database or version system. Applications that need persistence store the Conversation ID and initialize either `client.conversation({ id })` or `useRebyteChat({ initialConversationId })`.
 
 ## Agent definition versus execution
 

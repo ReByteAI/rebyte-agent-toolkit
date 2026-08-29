@@ -88,6 +88,7 @@ export interface CreateResponseParams {
   model: string
   input: ResponseInput
   stream?: boolean
+  conversation?: string | { id: string }
   previous_response_id?: string
   store?: true
   background?: false
@@ -212,12 +213,39 @@ export interface RebyteClientOptions {
   dangerouslyAllowBrowser?: boolean
 }
 
-export interface ConversationSnapshot {
+export interface RebyteConversationObject {
+  id: string
+  object: 'conversation'
   model: string
-  previousResponseId: string | null
+  title: string
+  status: 'idle' | 'running' | 'paused'
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateConversationParams {
+  model: string
+  title?: string
+}
+
+export interface ListConversationsParams {
+  model?: string
+  limit?: number
+  offset?: number
+}
+
+export interface ConversationList {
+  data: RebyteConversationObject[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface ConversationInterruptResult {
+  status: 'interrupting' | 'no_turn'
 }
 
 export type ConversationCreateParams = Omit<
   CreateResponseParams,
-  'model' | 'input' | 'stream' | 'previous_response_id'
+  'model' | 'input' | 'stream' | 'conversation' | 'previous_response_id'
 >

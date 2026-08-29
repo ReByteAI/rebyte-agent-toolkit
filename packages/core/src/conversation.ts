@@ -2,7 +2,6 @@ import type { Rebyte } from './client.js'
 import type { ResponseStream } from './stream.js'
 import type {
   ConversationCreateParams,
-  ConversationSnapshot,
   RebyteResponse,
   RequestOptions,
   ResponseInput,
@@ -10,19 +9,28 @@ import type {
 
 export class RebyteConversation {
   readonly model: string
-  private previousResponseId: string | null
+  private conversationId: string | null
 
   constructor(
     private readonly client: Rebyte,
-    options: { model: string; previousResponseId?: string },
+    options: { model: string; id?: string },
   ) {
     if (!options.model) throw new Error('model is required')
     this.model = options.model
-    this.previousResponseId = options.previousResponseId ?? null
+    this.conversationId = options.id ?? null
   }
 
-  snapshot(): ConversationSnapshot {
-    return { model: this.model, previousResponseId: this.previousResponseId }
+  get id(): string | null {
+    return this.conversationId
+  }
+
+  private bind(response: RebyteResponse): void {
+    const id = response.conversation.id
+    if (!id) throw new Error('Response did not include a Conversation id')
+    if (this.conversationId !== null && this.conversationId !== id) {
+      throw new Error(`Response moved from Conversation ${this.conversationId} to ${id}`)
+    }
+    this.conversationId = id
   }
 
   async send(
@@ -34,11 +42,11 @@ export class RebyteConversation {
       ...params,
       model: this.model,
       input,
-      ...(this.previousResponseId
-        ? { previous_response_id: this.previousResponseId }
+      ...(this.conversationId
+        ? { conversation: this.conversationId }
         : {}),
     }, options)
-    if (response.status === 'completed') this.previousResponseId = response.id
+    this.bind(response)
     return response
   }
 
@@ -52,14 +60,13 @@ export class RebyteConversation {
       model: this.model,
       input,
       stream: true,
-      ...(this.previousResponseId
-        ? { previous_response_id: this.previousResponseId }
+      ...(this.conversationId
+        ? { conversation: this.conversationId }
         : {}),
     }, options)
     stream.tap((event) => {
-      if (event.type !== 'response.completed') return
-      const response = event.response as RebyteResponse
-      this.previousResponseId = response.id
+      if (typeof event.response !== 'object' || event.response === null) return
+      this.bind(event.response as RebyteResponse)
     })
     return stream
   }

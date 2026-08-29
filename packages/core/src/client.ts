@@ -1,5 +1,6 @@
 import { RebyteAPIError } from './error.js'
 import { RebyteConversation } from './conversation.js'
+import { ConversationsResource } from './conversations.js'
 import { ResponseStream } from './stream.js'
 import type {
   CreateResponseParams,
@@ -88,6 +89,7 @@ export class ResponsesResource {
 
 export class Rebyte {
   readonly responses: ResponsesResource
+  readonly conversations: ConversationsResource
   readonly baseURL: string
   private readonly apiKey: string
   private readonly doFetch: typeof globalThis.fetch
@@ -103,13 +105,18 @@ export class Rebyte {
     }
     this.apiKey = options.apiKey
     this.baseURL = (options.baseURL ?? DEFAULT_BASE_URL).replace(/\/+$/, '')
-    this.doFetch = options.fetch ?? globalThis.fetch
-    if (!this.doFetch) throw new Error('No fetch implementation is available')
+    const doFetch = options.fetch ?? globalThis.fetch
+    if (!doFetch) throw new Error('No fetch implementation is available')
+    // Cloudflare Workers requires the platform fetch to be called with its
+    // native receiver. Wrapping it also prevents request() from accidentally
+    // rebinding a custom fetch to the Rebyte client instance.
+    this.doFetch = (input, init) => doFetch.call(globalThis, input, init)
     this.defaultHeaders = options.defaultHeaders ?? {}
     this.responses = new ResponsesResource(this)
+    this.conversations = new ConversationsResource(this)
   }
 
-  conversation(options: { model: string; previousResponseId?: string }) {
+  conversation(options: { model: string; id?: string }) {
     return new RebyteConversation(this, options)
   }
 

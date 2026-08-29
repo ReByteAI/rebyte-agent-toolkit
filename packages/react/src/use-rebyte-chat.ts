@@ -19,7 +19,7 @@ export interface AgentChatMessage {
 
 export interface UseRebyteChatOptions {
   transport: AgentTransport
-  initialPreviousResponseId?: string
+  initialConversationId?: string
   initialMessages?: AgentChatMessage[]
   onEvent?: (event: ResponseStreamEvent) => void
   onResponse?: (response: RebyteResponse) => void
@@ -30,17 +30,17 @@ export interface RebyteChat {
   messages: AgentChatMessage[]
   status: 'idle' | 'streaming' | 'error'
   error: Error | null
-  previousResponseId: string | null
+  conversationId: string | null
   send: (input: string) => Promise<RebyteResponse | null>
-  stop: () => void
-  reset: (options?: { previousResponseId?: string; messages?: AgentChatMessage[] }) => void
+  stop: () => Promise<void>
+  reset: (options?: { conversationId?: string; messages?: AgentChatMessage[] }) => void
 }
 
 interface State {
   messages: AgentChatMessage[]
   status: RebyteChat['status']
   error: Error | null
-  previousResponseId: string | null
+  conversationId: string | null
 }
 
 type Action =
@@ -48,7 +48,7 @@ type Action =
   | { type: 'event'; assistantId: string; event: ResponseStreamEvent }
   | { type: 'error'; assistantId: string; error: Error }
   | { type: 'cancel'; assistantId: string }
-  | { type: 'reset'; messages: AgentChatMessage[]; previousResponseId: string | null }
+  | { type: 'reset'; messages: AgentChatMessage[]; conversationId: string | null }
 
 function eventResponse(event: ResponseStreamEvent): RebyteResponse | null {
   return typeof event.response === 'object' && event.response !== null
@@ -87,10 +87,20 @@ function reducer(state: State, action: Action): State {
     const terminal = action.event.type === 'response.completed'
     const failed = action.event.type === 'response.failed' || action.event.type === 'error'
     const response = eventResponse(action.event)
+    const eventConversationId = response?.conversation.id ?? null
+    if (
+      eventConversationId
+      && state.conversationId
+      && eventConversationId !== state.conversationId
+    ) {
+      throw new Error(
+        `Response moved from Conversation ${state.conversationId} to ${eventConversationId}`,
+      )
+    }
     return {
       ...state,
       status: terminal ? 'idle' : failed ? 'error' : state.status,
-      previousResponseId: terminal && response ? response.id : state.previousResponseId,
+      conversationId: eventConversationId ?? state.conversationId,
       error: failed
         ? new Error(response?.error?.message ?? (
           typeof action.event.message === 'string' ? action.event.message : 'Response failed'
@@ -136,7 +146,7 @@ function reducer(state: State, action: Action): State {
     messages: action.messages,
     status: 'idle',
     error: null,
-    previousResponseId: action.previousResponseId,
+    conversationId: action.conversationId,
   }
 }
 
@@ -150,10 +160,12 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
     messages: options.initialMessages ?? [],
     status: 'idle',
     error: null,
-    previousResponseId: options.initialPreviousResponseId ?? null,
+    conversationId: options.initialConversationId ?? null,
   })
-  const stateRef = useRef(state)
-  stateRef.current = state
+  const conversationIdRef = useRef(state.conversationId)
+  if (state.conversationId !== conversationIdRef.current) {
+    conversationIdRef.current = state.conversationId
+  }
   const abortRef = useRef<AbortController | null>(null)
   const assistantIdRef = useRef<string | null>(null)
 
@@ -173,10 +185,23 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
     try {
       const stream = await transport.stream({
         input: text,
-        previousResponseId: stateRef.current.previousResponseId,
+        conversationId: conversationIdRef.current,
         signal: abort.signal,
       })
       for await (const event of stream) {
+        const response = eventResponse(event)
+        const eventConversationId = response?.conversation.id ?? null
+        if (eventConversationId) {
+          if (
+            conversationIdRef.current
+            && conversationIdRef.current !== eventConversationId
+          ) {
+            throw new Error(
+              `Response moved from Conversation ${conversationIdRef.current} to ${eventConversationId}`,
+            )
+          }
+          conversationIdRef.current = eventConversationId
+        }
         onEvent?.(event)
         dispatch({ type: 'event', assistantId, event })
         if (event.type === 'response.completed') {
@@ -208,19 +233,33 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
     }
   }, [onError, onEvent, onResponse, transport])
 
-  const stop = useCallback(() => {
-    abortRef.current?.abort()
-  }, [])
+  const stop = useCallback(async () => {
+    const abort = abortRef.current
+    if (!abort) return
+    const conversationId = conversationIdRef.current
+    try {
+      if (conversationId) await transport.interrupt(conversationId)
+    } catch (error) {
+      const normalized = asError(error)
+      const assistantId = assistantIdRef.current
+      if (assistantId) dispatch({ type: 'error', assistantId, error: normalized })
+      onError?.(normalized)
+      throw normalized
+    } finally {
+      abort.abort()
+    }
+  }, [onError, transport])
 
   const reset = useCallback((resetOptions: {
-    previousResponseId?: string
+    conversationId?: string
     messages?: AgentChatMessage[]
   } = {}) => {
     abortRef.current?.abort()
+    conversationIdRef.current = resetOptions.conversationId ?? null
     dispatch({
       type: 'reset',
       messages: resetOptions.messages ?? [],
-      previousResponseId: resetOptions.previousResponseId ?? null,
+      conversationId: resetOptions.conversationId ?? null,
     })
   }, [])
 
@@ -228,7 +267,7 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
     messages: state.messages,
     status: state.status,
     error: state.error,
-    previousResponseId: state.previousResponseId,
+    conversationId: state.conversationId,
     send,
     stop,
     reset,
