@@ -3,7 +3,7 @@
 Headless React state for Rebyte Agent interfaces.
 
 ```sh
-pnpm add https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-react.tgz
+pnpm add https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-agent-react.tgz
 ```
 
 Use `useRebyteChat` with `createFetchTransport`. The browser calls an endpoint

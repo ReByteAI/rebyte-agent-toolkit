@@ -1,6 +1,6 @@
 {
-  "name": "rebyte-agent-sdk",
-  "version": "0.1.0",
+  "name": "rebyte-agent-toolkit",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.27.0",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ReByteAI/rebyte-agent-sdk.git"
+    "url": "git+https://github.com/ReByteAI/rebyte-agent-toolkit.git"
   },
   "scripts": {
     "build": "pnpm -r build",

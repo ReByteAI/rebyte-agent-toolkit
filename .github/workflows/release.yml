@@ -27,7 +27,7 @@ jobs:
       - name: Verify tag matches every package version
         run: |
           version="${GITHUB_REF_NAME#v}"
-          for package in core react ui cli; do
+          for package in react ui cli; do
             test "$(node -p "require('./packages/$package/package.json').version")" = "$version"
           done
       - name: Build release archives

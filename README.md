@@ -59,7 +59,7 @@ MCP servers, and credentials come from the managed Agent configuration.
 The CLI is a public, token-free GitHub Release asset.
 
 ```sh
-pnpm add --global https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-cli.tgz
+pnpm add --global https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-cli.tgz
 export REBYTE_API_KEY="rbk_..."
 rebyte agent create -f agent.toml
 ```
@@ -70,7 +70,7 @@ Agents. It does not execute Responses.
 ## Headless React
 
 ```sh
-pnpm add https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-react.tgz
+pnpm add https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-agent-react.tgz
 ```
 
 The browser talks to an endpoint in your application. That endpoint uses the
@@ -111,8 +111,8 @@ second server-side Responses client.
 
 ```sh
 pnpm add \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-react.tgz \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-ui.tgz
+  https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-agent-react.tgz \
+  https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-agent-ui.tgz
 ```
 
 ```tsx

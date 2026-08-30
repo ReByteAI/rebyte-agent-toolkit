@@ -4,8 +4,8 @@ Optional React chat UI for Rebyte Agents.
 
 ```sh
 pnpm add \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-react.tgz \
-  https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-agent-ui.tgz
+  https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-agent-react.tgz \
+  https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-agent-ui.tgz
 ```
 
 Import `@rebyte/agent-ui/styles.css`, then render `AgentChat` with an

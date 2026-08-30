@@ -19,7 +19,7 @@ const rootPackage = JSON.parse(readFileSync(join(repositoryRoot, 'package.json')
 const version = requireVersion(rootPackage.version, 'root package')
 const tag = `v${version}`
 const releaseBaseUrl = process.env.REBYTE_RELEASE_BASE_URL
-  || `https://github.com/ReByteAI/rebyte-agent-sdk/releases/download/${tag}`
+  || `https://github.com/ReByteAI/rebyte-agent-toolkit/releases/download/${tag}`
 const outputDirectory = resolve(process.argv[2] || join(repositoryRoot, 'release'))
 
 if (existsSync(outputDirectory) && readdirSync(outputDirectory).length > 0) {

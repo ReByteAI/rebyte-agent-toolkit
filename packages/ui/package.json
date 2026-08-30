@@ -1,15 +1,15 @@
 {
   "name": "@rebyte/agent-ui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Optional React chat UI for Rebyte Agents",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ReByteAI/rebyte-agent-sdk.git",
+    "url": "git+https://github.com/ReByteAI/rebyte-agent-toolkit.git",
     "directory": "packages/ui"
   },
-  "homepage": "https://github.com/ReByteAI/rebyte-agent-sdk#readme",
-  "bugs": "https://github.com/ReByteAI/rebyte-agent-sdk/issues",
+  "homepage": "https://github.com/ReByteAI/rebyte-agent-toolkit#readme",
+  "bugs": "https://github.com/ReByteAI/rebyte-agent-toolkit/issues",
   "engines": { "node": ">=22" },
   "type": "module",
   "sideEffects": ["./src/styles.css"],

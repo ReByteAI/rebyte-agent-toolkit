@@ -5,7 +5,7 @@ Create and manage organization-scoped Rebyte Agents from `agent.toml`.
 ## Install from GitHub Releases
 
 ```sh
-pnpm add --global https://github.com/ReByteAI/rebyte-agent-sdk/releases/latest/download/rebyte-cli.tgz
+pnpm add --global https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-cli.tgz
 ```
 
 ## Authentication
