@@ -1,6 +1,6 @@
 {
   "name": "@rebyte/agent-react",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Headless React hooks and transports for Rebyte Agents",
   "license": "MIT",
   "repository": {
