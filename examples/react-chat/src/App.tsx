@@ -12,7 +12,7 @@ export function App() {
     <AgentChat
       transport={transport}
       brand="Rebyte"
-      agentName="SDK Test Agent"
+      agentName="Toolkit Test Agent"
       welcomeTitle="One agent. Any interface."
       welcomeDescription="The server uses the official OpenAI SDK. This UI is optional."
     />

@@ -47,12 +47,12 @@ async function runTurn(input: string) {
   return { response, eventCount: eventTypes.length }
 }
 
-const first = await runTurn('Reply with exactly SDK_STREAM_OK and nothing else.')
-assert.match(first.response.output_text, /SDK_STREAM_OK/)
+const first = await runTurn('Reply with exactly TOOLKIT_STREAM_OK and nothing else.')
+assert.match(first.response.output_text, /TOOLKIT_STREAM_OK/)
 assert.equal(conversationId, first.response.conversation?.id)
 
-const second = await runTurn('Reply with exactly SDK_CONTEXT_OK and nothing else.')
-assert.match(second.response.output_text, /SDK_CONTEXT_OK/)
+const second = await runTurn('Reply with exactly TOOLKIT_CONTEXT_OK and nothing else.')
+assert.match(second.response.output_text, /TOOLKIT_CONTEXT_OK/)
 assert.equal(second.response.conversation?.id, first.response.conversation?.id)
 assert.equal(second.response.previous_response_id, null)
 
