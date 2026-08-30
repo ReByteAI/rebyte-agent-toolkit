@@ -1,6 +1,6 @@
 {
   "name": "@rebyte/agent-ui",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Optional React chat UI for Rebyte Agents",
   "license": "MIT",
   "repository": {

@@ -6,8 +6,9 @@ import {
   readAgentManifest,
   serializeAgentManifest,
 } from './manifest.js'
+import packageJson from '../package.json' with { type: 'json' }
 
-const VERSION = '0.1.0'
+const VERSION = packageJson.version
 const DEFAULT_BASE_URL = 'https://api.rebyte.ai'
 type RebyteEnvironment = 'dev' | 'test' | 'prod'
 
