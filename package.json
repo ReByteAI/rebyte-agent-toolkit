@@ -14,6 +14,8 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm --filter @rebyte/example-react-chat dev",
+    "dev:cloudflare": "pnpm --filter @rebyte/example-cloudflare-app-kit dev",
+    "deploy:cloudflare": "pnpm --filter @rebyte/example-cloudflare-app-kit deploy",
     "pack:release": "node scripts/pack-release.mjs",
     "test": "pnpm --filter @rebyte/cli build && pnpm --filter @rebyte/cli smoke",
     "test:live": "pnpm build && pnpm --filter @rebyte/example-react-chat test:live",

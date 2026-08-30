@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rebyte-agent-app-kit",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-08-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "REBYTE_API_URL": "https://api.rebyte.ai/v1",
+    "REBYTE_AGENT_ID": "62bfb44b-7dc6-40d7-a42a-55488cf42043"
+  }
+}

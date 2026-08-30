@@ -9,6 +9,7 @@ management CLI and optional browser UI layers.
 - [Agent API documentation](https://rebyte.ai/docs/agent-api/overview)
 - [Getting started](https://rebyte.ai/docs/agent-api/quickstart)
 - [Create an API key](https://app.rebyte.ai/settings/api-keys)
+- [Hosted App Kit](https://rebyte-agent-app-kit.cctools.workers.dev) (`@rebyte.ai` access)
 
 ## Two interfaces
 
@@ -150,6 +151,20 @@ pnpm test:live
 ```
 
 See [docs/architecture.md](./docs/architecture.md) for the trust boundary.
+
+## Hosted Cloudflare App Kit
+
+The maintained online example uses the same optional React packages. Its
+Cloudflare Worker keeps the organization key private, calls the Agent through
+the official OpenAI SDK, and forwards the SSE stream to the browser.
+
+```text
+Browser UI → Cloudflare Worker → OpenAI SDK → Rebyte Agent API
+```
+
+The source, Agent configuration, deployment instructions, and file endpoint
+are in [`examples/cloudflare-app-kit`](./examples/cloudflare-app-kit). The live
+site is protected by Cloudflare Access for the `rebyte.ai` email domain.
 
 ## Development
 

@@ -1,0 +1,10 @@
+name = "rebyte-app-kit-demo"
+description = "Managed Agent behind the hosted Rebyte App Kit example"
+llm = "gpt-5.4-mini"
+max_steps = 8
+prompt_file = "prompt.md"
+
+capabilities = [
+  "sandbox",
+  "skills"
+]

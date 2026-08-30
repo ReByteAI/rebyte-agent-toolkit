@@ -1,0 +1,28 @@
+{
+  "name": "@rebyte/example-cloudflare-app-kit",
+  "version": "0.1.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "concurrently -k -n worker,web -c blue,green \"wrangler dev --port 4101\" \"vite --host 127.0.0.1 --port 4100\"",
+    "deploy": "pnpm build && wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rebyte/agent-react": "workspace:*",
+    "@rebyte/agent-ui": "workspace:*",
+    "hono": "^4.9.9",
+    "openai": "^6.34.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260830.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.9",
+    "wrangler": "^4.127.1"
+  }
+}

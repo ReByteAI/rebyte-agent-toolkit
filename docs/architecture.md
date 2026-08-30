@@ -47,6 +47,16 @@ Browser                 Your application server               Rebyte
 implements the forwarding side with the official OpenAI SDK. Authentication
 and per-user authorization remain application concerns.
 
+The maintained hosted example puts this application-server boundary in a
+Cloudflare Worker. Cloudflare Access authenticates the browser before the
+Worker can be reached. The Worker stores `REBYTE_API_KEY` as a Cloudflare
+Secret, fixes the managed Agent ID in deployment configuration, and streams the
+official OpenAI SDK response without buffering it.
+
+Files use a separate upload step: the Worker requests an organization-scoped
+signed URL from Rebyte, the browser uploads bytes directly to object storage,
+and the following Responses input references the opaque `file_id`.
+
 ## State ownership
 
 A Conversation keeps one stable `conv_…` ID across turns. The server passes
