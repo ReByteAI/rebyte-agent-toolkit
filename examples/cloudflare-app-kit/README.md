@@ -14,10 +14,11 @@ Cloudflare Worker ── official OpenAI SDK ── Rebyte /v1/responses
 ```
 
 The Worker keeps `REBYTE_API_KEY` on the server and fixes the public Agent ID in
-`wrangler.jsonc`. It forwards the Responses event stream without buffering it. `/api/files` creates
-the same signed Rebyte file upload used by other API clients, and
-`/api/responses` accepts the focused OpenAI input array used to reference the
-returned `file_id`. File selection in the reference UI is not implemented yet.
+`wrangler.jsonc`. It forwards the Responses event stream without buffering it.
+The composer supports files and images: it streams each selected file to
+`/api/files`, the Worker creates the Rebyte upload and writes the stream to the
+signed object-storage URL, and `/api/responses` references the returned
+`file_id` using the focused OpenAI input array.
 
 [`agent.toml`](./agent.toml) is the source configuration for the hosted Agent.
 

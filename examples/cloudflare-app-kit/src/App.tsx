@@ -6,6 +6,7 @@ export function App() {
   const transport = useMemo(() => createFetchTransport({
     url: '/api/responses',
     interruptUrl: '/api/conversations/interrupt',
+    fileUrl: '/api/files',
   }), [])
 
   return (

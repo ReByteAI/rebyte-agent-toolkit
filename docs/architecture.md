@@ -53,9 +53,11 @@ Worker can be reached. The Worker stores `REBYTE_API_KEY` as a Cloudflare
 Secret, fixes the managed Agent ID in deployment configuration, and streams the
 official OpenAI SDK response without buffering it.
 
-Files use a separate upload step: the Worker requests an organization-scoped
-signed URL from Rebyte, the browser uploads bytes directly to object storage,
-and the following Responses input references the opaque `file_id`.
+Files still use Rebyte's separate upload primitive. In the hosted App Kit, the
+browser streams the file to the same-origin Worker; the Worker requests an
+organization-scoped signed URL and streams the bytes to object storage. This
+avoids exposing credentials or depending on bucket CORS. The following
+Responses input references the resulting opaque `file_id`.
 
 ## State ownership
 

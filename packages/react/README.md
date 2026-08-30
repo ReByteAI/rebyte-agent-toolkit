@@ -10,7 +10,11 @@ Use `useRebyteChat` with `createFetchTransport`. The browser calls an endpoint
 owned by your application; the server executes the Agent with the official
 OpenAI SDK and forwards the SSE body.
 
-This package owns chat state, interruption, and event reduction. It does not
-contain a Rebyte Responses client.
+Set `fileUrl` to enable the headless upload method. The browser streams bytes to
+that same-origin application endpoint, receives a `file_id`, and sends it as a
+focused OpenAI Responses file or image input.
+
+This package owns chat state, uploads, interruption, and event reduction. It
+does not contain a Rebyte Responses client.
 
 See the [repository README](../../README.md#headless-react) for usage.

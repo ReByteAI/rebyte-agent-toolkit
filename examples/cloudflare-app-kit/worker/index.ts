@@ -34,6 +34,30 @@ function responseInput(value: unknown): string | OpenAI.Responses.ResponseInput 
   return null
 }
 
+interface FileReservation {
+  id: string
+  filename: string
+  uploadUrl: string
+  maxFileSize: number
+}
+
+function fileReservation(value: unknown): FileReservation {
+  if (typeof value !== 'object' || value === null) {
+    throw new Error('Rebyte file API returned a non-object response')
+  }
+  const id = Reflect.get(value, 'id')
+  const filename = Reflect.get(value, 'filename')
+  const uploadUrl = Reflect.get(value, 'uploadUrl')
+  const maxFileSize = Reflect.get(value, 'maxFileSize')
+  if (typeof id !== 'string' || !id) throw new Error('Rebyte file API returned no file ID')
+  if (typeof filename !== 'string' || !filename) throw new Error('Rebyte file API returned no filename')
+  if (typeof uploadUrl !== 'string' || !uploadUrl) throw new Error('Rebyte file API returned no upload URL')
+  if (typeof maxFileSize !== 'number' || maxFileSize <= 0) {
+    throw new Error('Rebyte file API returned no maximum file size')
+  }
+  return { id, filename, uploadUrl, maxFileSize }
+}
+
 app.use('/api/*', async (context, next) => {
   await next()
   context.header('Cache-Control', 'no-store')
@@ -78,40 +102,61 @@ app.post('/api/responses', async (context) => {
 })
 
 app.post('/api/files', async (context) => {
-  const body: unknown = await context.req.json()
-  if (typeof body !== 'object' || body === null) {
-    return context.json({ error: { message: 'Request body must be an object' } }, 400)
-  }
-  const filename = Reflect.get(body, 'filename')
-  const contentType = Reflect.get(body, 'contentType')
-  if (typeof filename !== 'string' || filename.trim() === '') {
+  const filename = context.req.query('filename')
+  const requestContentType = context.req.header('Content-Type')
+  const contentType = requestContentType && requestContentType.trim()
+    ? requestContentType
+    : 'application/octet-stream'
+  if (!filename || filename.trim() === '') {
     return context.json({ error: { message: 'filename must be a non-empty string' } }, 400)
   }
-  if (contentType !== undefined && typeof contentType !== 'string') {
-    return context.json({ error: { message: 'contentType must be a string' } }, 400)
+  if (!context.req.raw.body) {
+    return context.json({ error: { message: 'File body is required' } }, 400)
   }
 
-  const response = await fetch(`${baseURL(context.env)}/files`, {
+  const reservationResponse = await fetch(`${baseURL(context.env)}/files`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${requireBinding(context.env.REBYTE_API_KEY, 'REBYTE_API_KEY')}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      filename,
-      ...(contentType ? { contentType } : {}),
-    }),
+    body: JSON.stringify({ filename, contentType }),
     signal: context.req.raw.signal,
   })
+  if (!reservationResponse.ok) {
+    return new Response(reservationResponse.body, {
+      status: reservationResponse.status,
+      headers: {
+        'Cache-Control': 'no-store',
+        'Content-Type': reservationResponse.headers.get('Content-Type') || 'application/json',
+      },
+    })
+  }
+  const reservation = fileReservation(await reservationResponse.json())
+  const contentLength = context.req.header('Content-Length')
+  if (contentLength && Number(contentLength) > reservation.maxFileSize) {
+    return context.json({ error: { message: 'File exceeds the upload limit' } }, 413)
+  }
 
-  return new Response(response.body, {
-    status: response.status,
-    headers: {
-      'Cache-Control': 'no-store',
-      'Content-Type': response.headers.get('Content-Type') || 'application/json',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  })
+  const uploadInit: RequestInit & { duplex: 'half' } = {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: context.req.raw.body,
+    signal: context.req.raw.signal,
+    duplex: 'half',
+  }
+  const uploadResponse = await fetch(reservation.uploadUrl, uploadInit)
+  if (!uploadResponse.ok) {
+    console.error('Signed file upload failed', { status: uploadResponse.status })
+    return context.json({ error: { message: 'Object storage rejected the file upload' } }, 502)
+  }
+
+  return context.json({
+    id: reservation.id,
+    filename: reservation.filename,
+    contentType,
+    maxFileSize: reservation.maxFileSize,
+  }, 201)
 })
 
 app.post('/api/conversations/interrupt', async (context) => {

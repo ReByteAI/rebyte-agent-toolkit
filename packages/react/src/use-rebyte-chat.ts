@@ -6,12 +6,18 @@ import {
   type ResponseState,
   type ResponseStreamEvent,
 } from './responses.js'
-import type { AgentTransport } from './transport.js'
+import type {
+  AgentAttachment,
+  AgentChatInput,
+  AgentTransport,
+  AgentUploadProgress,
+} from './transport.js'
 
 export interface AgentChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
+  attachments?: AgentAttachment[]
   status: 'completed' | 'streaming' | 'failed' | 'cancelled'
   responseId: string | null
   response: ResponseState | null
@@ -31,7 +37,11 @@ export interface RebyteChat {
   status: 'idle' | 'streaming' | 'error'
   error: Error | null
   conversationId: string | null
-  send: (input: string) => Promise<ResponseObject | null>
+  send: (input: string | AgentChatInput) => Promise<ResponseObject | null>
+  upload: ((
+    file: File,
+    onProgress?: (progress: AgentUploadProgress) => void,
+  ) => Promise<AgentAttachment>) | null
   stop: () => Promise<void>
   reset: (options?: { conversationId?: string; messages?: AgentChatMessage[] }) => void
 }
@@ -44,7 +54,7 @@ interface State {
 }
 
 type Action =
-  | { type: 'start'; userId: string; assistantId: string; input: string }
+  | { type: 'start'; userId: string; assistantId: string; input: AgentChatInput }
   | { type: 'event'; assistantId: string; event: ResponseStreamEvent }
   | { type: 'error'; assistantId: string; error: Error }
   | { type: 'cancel'; assistantId: string }
@@ -67,7 +77,8 @@ function reducer(state: State, action: Action): State {
         {
           id: action.userId,
           role: 'user',
-          content: action.input,
+          content: action.input.text,
+          attachments: action.input.attachments,
           status: 'completed',
           responseId: null,
           response: null,
@@ -154,8 +165,19 @@ function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
 }
 
+function normalizedInput(input: string | AgentChatInput): AgentChatInput {
+  const normalized = typeof input === 'string'
+    ? { text: input.trim(), attachments: [] }
+    : { text: input.text.trim(), attachments: [...input.attachments] }
+  if (!normalized.text && normalized.attachments.length === 0) {
+    throw new Error('input is required')
+  }
+  return normalized
+}
+
 export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
   const { transport, onEvent, onResponse, onError } = options
+  const uploadFile = transport.upload
   const [state, dispatch] = useReducer(reducer, {
     messages: options.initialMessages ?? [],
     status: 'idle',
@@ -169,9 +191,8 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
   const abortRef = useRef<AbortController | null>(null)
   const assistantIdRef = useRef<string | null>(null)
 
-  const send = useCallback(async (input: string): Promise<ResponseObject | null> => {
-    const text = input.trim()
-    if (!text) throw new Error('input is required')
+  const send = useCallback(async (input: string | AgentChatInput): Promise<ResponseObject | null> => {
+    const normalized = normalizedInput(input)
     if (abortRef.current) throw new Error('A response is already streaming')
 
     const userId = crypto.randomUUID()
@@ -179,12 +200,12 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
     const abort = new AbortController()
     abortRef.current = abort
     assistantIdRef.current = assistantId
-    dispatch({ type: 'start', userId, assistantId, input: text })
+    dispatch({ type: 'start', userId, assistantId, input: normalized })
 
     let terminal: ResponseObject | null = null
     try {
       const stream = await transport.stream({
-        input: text,
+        input: normalized.attachments.length > 0 ? normalized : normalized.text,
         conversationId: conversationIdRef.current,
         signal: abort.signal,
       })
@@ -269,6 +290,9 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
     error: state.error,
     conversationId: state.conversationId,
     send,
+    upload: uploadFile
+      ? (file, onProgress) => uploadFile(file, onProgress)
+      : null,
     stop,
     reset,
   }

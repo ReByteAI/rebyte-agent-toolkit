@@ -86,6 +86,7 @@ function Chat() {
     () => createFetchTransport({
       url: '/api/responses',
       interruptUrl: '/api/conversations/interrupt',
+      fileUrl: '/api/files',
     }),
     [],
   )
@@ -124,6 +125,7 @@ import '@rebyte/agent-ui/styles.css'
 const transport = createFetchTransport({
   url: '/api/responses',
   interruptUrl: '/api/conversations/interrupt',
+  fileUrl: '/api/files',
 })
 
 export function App() {
@@ -165,6 +167,9 @@ Browser UI → Cloudflare Worker → OpenAI SDK → Rebyte Agent API
 The source, Agent configuration, deployment instructions, and file endpoint
 are in [`examples/cloudflare-app-kit`](./examples/cloudflare-app-kit). The live
 site is protected by Cloudflare Access for the `rebyte.ai` email domain.
+
+The reference composer includes multiple-file selection, upload progress,
+removal, file/image input mapping, and attachment display in sent messages.
 
 ## Development
 

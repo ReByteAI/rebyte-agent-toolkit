@@ -10,6 +10,7 @@ pnpm add \
 
 Import `@rebyte/agent-ui/styles.css`, then render `AgentChat` with an
 `AgentTransport`. Use `AgentChatView` when your application owns the headless
-state.
+state. When the transport defines `upload`, the composer shows its attachment
+button, upload progress, removal controls, and sent-file summaries.
 
 See the [repository README](../../README.md#optional-ui) for usage.
