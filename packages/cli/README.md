@@ -32,3 +32,22 @@ resulting Agents do not appear in the product UI. Execute them through
 `/v1/responses`.
 
 See the [`agent.toml` reference](https://rebyte.ai/docs/agent-api/agents#portable-agenttoml).
+
+## Agent network policy
+
+Agents inherit the organization network policy unless `agent.toml` contains a
+complete override:
+
+```toml
+[network_policy]
+allow_network_egress = true
+domain_allowlist = "none"
+additional_allowed_domains = ["api.example.com", "*.example.org"]
+allow_public_traffic = false
+```
+
+`domain_allowlist` accepts `all_domains`, `package_managers_only`, or `none`.
+The table fully replaces the organization default. Remove it and run
+`rebyte agent apply` to restore inheritance. The policy applies when a new
+Conversation Sandbox is created; existing Conversations keep their current
+boundary.

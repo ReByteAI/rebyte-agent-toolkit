@@ -50,6 +50,12 @@ capabilities = [
 [[skills]]
 repo = "rebyteai/skills"
 path = "research/deep-research"
+
+[network_policy]
+allow_network_egress = true
+domain_allowlist = "none"
+additional_allowed_domains = ["api.example.com"]
+allow_public_traffic = false
 `, 'utf8')
 
   await listen(server)
@@ -70,6 +76,12 @@ path = "research/deep-research"
   assert.equal(agent.instructions, 'Research carefully.\n')
   assert.equal(agent.mcpServers[1].kind, 'composio')
   assert.equal(agent.mcpServers[2].kind, 'custom')
+  assert.deepEqual(agent.networkPolicy, {
+    allow_network_egress: true,
+    domain_allowlist: 'none',
+    additional_allowed_domains: ['api.example.com'],
+    allow_public_traffic: false,
+  })
 
   const exportPath = join(fixtureDir, 'exported.toml')
   const exported = await runCli([
@@ -79,6 +91,7 @@ path = "research/deep-research"
   const exportedText = readFileSync(exportPath, 'utf8')
   assert.match(exportedText, /composio:github/)
   assert.match(exportedText, /\[\[skills\]\]/)
+  assert.match(exportedText, /\[network_policy\]/)
   await runCli(['agent', 'validate', '-f', exportPath])
 
   const refusedOverwrite = await runCli([
@@ -88,7 +101,7 @@ path = "research/deep-research"
 
   writeFileSync(join(fixtureDir, 'apply.toml'), `
 name = "Updated Research Agent"
-llm = "glm-5.2"
+llm = "glm-5.3"
 max_steps = 32
 prompt = "Updated prompt"
 capabilities = ["sandbox", "skills"]
@@ -100,6 +113,7 @@ capabilities = ["sandbox", "skills"]
   assert.equal(agent.name, 'Updated Research Agent')
   assert.equal(agent.description, null)
   assert.equal(agent.instructions, 'Updated prompt')
+  assert.equal(agent.networkPolicy, null)
 
   writeFileSync(join(fixtureDir, 'unknown.toml'), 'name = "Bad"\ntype = "codex"\n', 'utf8')
   const unknown = await runCli([

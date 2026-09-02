@@ -155,7 +155,10 @@ async function run(): Promise<void> {
     const manifest = readAgentManifest(options.file)
     const agent = await requireApiClient(options).updateAgent(
       id,
-      manifestToApiPayload(manifest, { includeNullDescription: true }),
+      manifestToApiPayload(manifest, {
+        includeNullDescription: true,
+        includeNullNetworkPolicy: true,
+      }),
     )
     process.stdout.write(`Applied agent.toml to Agent ${agent.id} (${agent.name})\n`)
     return

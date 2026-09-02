@@ -1,6 +1,6 @@
 {
   "name": "@rebyte/cli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Create and manage Rebyte Agents from agent.toml",
   "license": "MIT",
   "repository": {
