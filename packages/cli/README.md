@@ -31,7 +31,47 @@ These commands manage API Agents. They do not create Workspace Agents and the
 resulting Agents do not appear in the product UI. Execute them through
 `/v1/responses`.
 
-See the [`agent.toml` reference](https://rebyte.ai/docs/agent-api/agents#portable-agenttoml).
+See the [`agent.toml` reference](https://rebyte.ai/docs/cli/agent-configuration).
+
+## Client tools
+
+Client tools are function definitions stored on the Agent and executed by the
+application that calls it. Add them once to `agent.toml`; do not send their
+schemas on every Response:
+
+```toml
+[[client_tools]]
+type = "function"
+name = "present_products"
+description = "Render product cards in the host application."
+strict = true
+
+[client_tools.parameters]
+type = "object"
+required = ["product_ids"]
+additionalProperties = false
+
+[client_tools.parameters.properties.product_ids]
+type = "array"
+minItems = 1
+maxItems = 20
+items = { type = "string" }
+```
+
+The parameter schema uses the OpenAI strict subset. Its root is an object;
+every object lists all properties in `required` and sets
+`additionalProperties = false`. Nullable fields remain required and include
+`"null"` in their type. The CLI accepts draft-07 `definitions`, `$defs`,
+references, string and array bounds, and rejects unsupported keywords such as
+`default`.
+
+The Agent emits a standard Responses `function_call`. Execute it in your
+server or application, then submit a `function_call_output` in the same
+Conversation with the official OpenAI SDK. The CLI manages the definition; it
+does not execute the function. Submit every call returned by the Response in
+one continuation; each `output` must be a string, and the continuation must use
+the Conversation that emitted the calls. Do not pass request-level `tools` or
+`previous_response_id`.
 
 ## Agent network policy
 

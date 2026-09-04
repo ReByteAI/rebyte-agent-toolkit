@@ -55,6 +55,12 @@ for await (const event of stream) {
 turns. Rebyte supports a focused OpenAI Responses subset; Agent tools, Skills,
 MCP servers, and credentials come from the managed Agent configuration.
 
+Client tool definitions also belong to the managed Agent configuration. When
+an Agent emits a standard `function_call`, execute it in the host application
+and submit all returned `function_call_output` items through the official
+OpenAI SDK in the same Conversation. No Rebyte Responses SDK or OpenAI SDK
+modification is required.
+
 ## Configure with the Rebyte CLI
 
 The CLI is a public, token-free GitHub Release asset.

@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { parse, stringify } from 'smol-toml'
 import { z } from 'zod'
+import { StrictClientToolParametersSchema } from './client-tool-schema.js'
 
 export const AGENT_MODEL_IDS = [
   'deepseek-v4-pro',
@@ -50,6 +51,7 @@ const REPO_RELATIVE_DIRECTORY_PATTERN =
   /^(?!\/)(?!.*(?:^|\/)\.\.?(?:\/|$))(?!.*\\)(?!.*[?#\s])[^/]+(?:\/[^/]+)*$/
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const CLIENT_TOOL_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 const INTERNAL_CAPABILITIES = new Set<string>(INTERNAL_CAPABILITY_IDS)
 
 const AgentSkillSchema = z.object({
@@ -77,6 +79,17 @@ const AgentNetworkPolicySchema = z.object({
   allow_public_traffic: z.boolean().default(false),
 }).strict()
 
+const AgentClientToolSchema = z.object({
+  type: z.literal('function'),
+  name: z.string().regex(
+    CLIENT_TOOL_NAME_PATTERN,
+    'name must contain 1-64 letters, numbers, underscores, or hyphens',
+  ),
+  description: z.string().trim().min(1),
+  parameters: StrictClientToolParametersSchema,
+  strict: z.literal(true),
+}).strict()
+
 const AgentManifestFileSchema = z.object({
   name: z.string().trim().min(1).max(100),
   description: z.string().trim().max(500).optional(),
@@ -86,6 +99,7 @@ const AgentManifestFileSchema = z.object({
   prompt_file: z.string().trim().min(1).optional(),
   capabilities: z.array(z.string().trim().min(1)).max(64).optional(),
   skills: z.array(AgentSkillSchema).max(128).optional(),
+  client_tools: z.array(AgentClientToolSchema).max(64).optional(),
   network_policy: AgentNetworkPolicySchema.optional(),
 }).strict().superRefine((manifest, context) => {
   if (manifest.prompt !== undefined && manifest.prompt_file !== undefined) {
@@ -102,6 +116,12 @@ const AgentManifestFileSchema = z.object({
     ['skills'],
     context,
   )
+  validateUnique(
+    (manifest.client_tools ?? []).map((tool) => tool.name),
+    'client tool',
+    ['client_tools'],
+    context,
+  )
   for (const [index, capability] of (manifest.capabilities ?? []).entries()) {
     const error = capabilityError(capability)
     if (error) {
@@ -116,6 +136,7 @@ const AgentManifestFileSchema = z.object({
 
 export type AgentSkill = z.infer<typeof AgentSkillSchema>
 export type AgentNetworkPolicy = z.infer<typeof AgentNetworkPolicySchema>
+export type AgentClientTool = z.infer<typeof AgentClientToolSchema>
 
 export type AgentMcpServer =
   | { kind: 'internal'; name: string }
@@ -130,6 +151,7 @@ export interface ResolvedAgentManifest {
   maxSteps: number
   mcpServers: AgentMcpServer[]
   skills: AgentSkill[]
+  clientTools: AgentClientTool[]
   networkPolicy: AgentNetworkPolicy | null
 }
 
@@ -204,6 +226,23 @@ function formatZodError(error: z.ZodError): string {
   }).join('\n')
 }
 
+function findJsonNullPath(value: unknown, path: string): string | null {
+  if (value === null) return path
+  if (Array.isArray(value)) {
+    for (const [index, item] of value.entries()) {
+      const found = findJsonNullPath(item, `${path}[${index}]`)
+      if (found !== null) return found
+    }
+    return null
+  }
+  if (typeof value !== 'object') return null
+  for (const [key, item] of Object.entries(value)) {
+    const found = findJsonNullPath(item, `${path}.${key}`)
+    if (found !== null) return found
+  }
+  return null
+}
+
 export function readAgentManifest(path: string): ResolvedAgentManifest {
   const absolutePath = resolve(path)
   let parsedToml: unknown
@@ -241,11 +280,23 @@ export function readAgentManifest(path: string): ResolvedAgentManifest {
     maxSteps: manifest.max_steps ?? DEFAULT_MAX_STEPS,
     mcpServers: capabilities.map(capabilityToMcpServer),
     skills: manifest.skills ?? [],
+    clientTools: manifest.client_tools ?? [],
     networkPolicy: manifest.network_policy ?? null,
   }
 }
 
 export function serializeAgentManifest(agent: RebyteAgentRecord): string {
+  for (const [index, tool] of agent.clientTools.entries()) {
+    const nullPath = findJsonNullPath(
+      tool.parameters,
+      `clientTools[${index}].parameters`,
+    )
+    if (nullPath !== null) {
+      throw new Error(
+        `${nullPath} contains literal JSON null, which agent.toml cannot represent`,
+      )
+    }
+  }
   const document: Record<string, unknown> = {
     name: agent.name,
     ...(agent.description === null ? {} : { description: agent.description }),
@@ -254,6 +305,9 @@ export function serializeAgentManifest(agent: RebyteAgentRecord): string {
     capabilities: agent.mcpServers.map(mcpServerToCapability),
     prompt: agent.instructions,
     ...(agent.skills.length === 0 ? {} : { skills: agent.skills }),
+    ...(agent.clientTools.length === 0
+      ? {}
+      : { client_tools: agent.clientTools }),
     ...(agent.networkPolicy === null
       ? {}
       : { network_policy: agent.networkPolicy }),
@@ -278,6 +332,7 @@ export function manifestToApiPayload(
     maxSteps: manifest.maxSteps,
     mcpServers: manifest.mcpServers,
     skills: manifest.skills,
+    clientTools: manifest.clientTools,
     ...(manifest.networkPolicy === null && options?.includeNullNetworkPolicy !== true
       ? {}
       : { networkPolicy: manifest.networkPolicy }),

@@ -51,6 +51,28 @@ capabilities = [
 repo = "rebyteai/skills"
 path = "research/deep-research"
 
+[[client_tools]]
+type = "function"
+name = "present_research"
+description = "Render the research result in the host application."
+strict = true
+
+[client_tools.parameters]
+type = "object"
+"$schema" = "http://json-schema.org/draft-07/schema#"
+required = ["title", "sources"]
+additionalProperties = false
+
+[client_tools.parameters.properties.title]
+type = ["string", "null"]
+minLength = 1
+
+[client_tools.parameters.properties.sources]
+type = "array"
+minItems = 1
+maxItems = 20
+items = { type = "string" }
+
 [network_policy]
 allow_network_egress = true
 domain_allowlist = "none"
@@ -76,6 +98,27 @@ allow_public_traffic = false
   assert.equal(agent.instructions, 'Research carefully.\n')
   assert.equal(agent.mcpServers[1].kind, 'composio')
   assert.equal(agent.mcpServers[2].kind, 'custom')
+  assert.deepEqual(agent.clientTools, [{
+    type: 'function',
+    name: 'present_research',
+    description: 'Render the research result in the host application.',
+    parameters: {
+      type: 'object',
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      required: ['title', 'sources'],
+      additionalProperties: false,
+      properties: {
+        title: { type: ['string', 'null'], minLength: 1 },
+        sources: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 20,
+          items: { type: 'string' },
+        },
+      },
+    },
+    strict: true,
+  }])
   assert.deepEqual(agent.networkPolicy, {
     allow_network_egress: true,
     domain_allowlist: 'none',
@@ -91,6 +134,8 @@ allow_public_traffic = false
   const exportedText = readFileSync(exportPath, 'utf8')
   assert.match(exportedText, /composio:github/)
   assert.match(exportedText, /\[\[skills\]\]/)
+  assert.match(exportedText, /\[\[client_tools\]\]/)
+  assert.match(exportedText, /\[client_tools\.parameters\.properties\.title\]/)
   assert.match(exportedText, /\[network_policy\]/)
   await runCli(['agent', 'validate', '-f', exportPath])
 
@@ -98,6 +143,16 @@ allow_public_traffic = false
     'agent', 'export', agentId, '-o', exportPath, ...common,
   ], false)
   assert.match(refusedOverwrite.stderr, /already exists/)
+
+  agent.clientTools[0].parameters.properties.title.enum = ['brief', null]
+  const refusedNullExport = await runCli([
+    'agent', 'export', agentId, ...common,
+  ], false)
+  assert.match(
+    refusedNullExport.stderr,
+    /clientTools\[0\]\.parameters\.properties\.title\.enum\[1\] contains literal JSON null/,
+  )
+  delete agent.clientTools[0].parameters.properties.title.enum
 
   writeFileSync(join(fixtureDir, 'apply.toml'), `
 name = "Updated Research Agent"
@@ -113,6 +168,7 @@ capabilities = ["sandbox", "skills"]
   assert.equal(agent.name, 'Updated Research Agent')
   assert.equal(agent.description, null)
   assert.equal(agent.instructions, 'Updated prompt')
+  assert.deepEqual(agent.clientTools, [])
   assert.equal(agent.networkPolicy, null)
 
   writeFileSync(join(fixtureDir, 'unknown.toml'), 'name = "Bad"\ntype = "codex"\n', 'utf8')
@@ -121,7 +177,58 @@ capabilities = ["sandbox", "skills"]
   ], false)
   assert.match(unknown.stderr, /Unrecognized key.*type/)
 
-  assert.equal(requestCount, 3)
+  writeFileSync(join(fixtureDir, 'unsupported-schema.toml'), `
+name = "Bad schema"
+
+[[client_tools]]
+type = "function"
+name = "search"
+description = "Search locally."
+strict = true
+
+[client_tools.parameters]
+type = "object"
+required = ["query"]
+additionalProperties = false
+
+[client_tools.parameters.properties.query]
+type = "string"
+default = "all"
+`, 'utf8')
+  const unsupportedSchema = await runCli([
+    'agent', 'validate', '-f', join(fixtureDir, 'unsupported-schema.toml'),
+  ], false)
+  assert.match(
+    unsupportedSchema.stderr,
+    /unsupported strict JSON Schema keyword: default/,
+  )
+
+  writeFileSync(join(fixtureDir, 'optional-field.toml'), `
+name = "Bad required fields"
+
+[[client_tools]]
+type = "function"
+name = "search"
+description = "Search locally."
+strict = true
+
+[client_tools.parameters]
+type = "object"
+required = []
+additionalProperties = false
+
+[client_tools.parameters.properties.query]
+type = "string"
+`, 'utf8')
+  const optionalField = await runCli([
+    'agent', 'validate', '-f', join(fixtureDir, 'optional-field.toml'),
+  ], false)
+  assert.match(
+    optionalField.stderr,
+    /required: must contain every property name exactly once/,
+  )
+
+  assert.equal(requestCount, 4)
   process.stdout.write('agent.toml CLI smoke passed\n')
 } finally {
   await new Promise((resolve) => server.close(resolve))

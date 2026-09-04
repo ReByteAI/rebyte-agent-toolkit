@@ -8,7 +8,7 @@ Control plane                           Execution
 agent.toml ── Rebyte CLI ── Agent API   OpenAI SDK ── /v1/responses
                          │                         │
                          └──── managed Agent ──────┘
-                               Skills + MCP
+                               Skills + MCP + client tools
                                cloud runtime
 ```
 
@@ -67,6 +67,18 @@ state; it is not a Conversation database.
 
 ## Agent definition versus execution
 
-`agent.toml` defines the prompt, model, Skills, MCP servers, and connected
-capabilities. The CLI or Agent REST API stores that definition. The returned
-Agent ID is then used as `model` with the official OpenAI SDK.
+`agent.toml` defines the prompt, model, Skills, MCP servers, client tools, and
+connected capabilities. The CLI or Agent REST API stores that definition. The
+returned Agent ID is then used as `model` with the official OpenAI SDK.
+
+MCP tools execute behind Rebyte. Client tools execute in the host application:
+
+```text
+Host application ── user input ─────────────> Response A
+Host application <─ function_call ─────────── Response A
+Host application ── function_call_output ───> Response B, same Conversation
+```
+
+The function-call objects use the standard Responses format. The host does not
+resend tool definitions with each Response and does not need a modified OpenAI
+SDK.
