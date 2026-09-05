@@ -2,7 +2,10 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { parse, stringify } from 'smol-toml'
 import { z } from 'zod'
-import { StrictClientToolParametersSchema } from './client-tool-schema.js'
+import {
+  NonStrictClientToolParametersSchema,
+  StrictClientToolParametersSchema,
+} from './client-tool-schema.js'
 
 export const AGENT_MODEL_IDS = [
   'deepseek-v4-pro',
@@ -79,16 +82,27 @@ const AgentNetworkPolicySchema = z.object({
   allow_public_traffic: z.boolean().default(false),
 }).strict()
 
-const AgentClientToolSchema = z.object({
+const AgentClientToolFields = {
   type: z.literal('function'),
   name: z.string().regex(
     CLIENT_TOOL_NAME_PATTERN,
     'name must contain 1-64 letters, numbers, underscores, or hyphens',
   ),
   description: z.string().trim().min(1),
-  parameters: StrictClientToolParametersSchema,
-  strict: z.literal(true),
-}).strict()
+}
+
+const AgentClientToolSchema = z.discriminatedUnion('strict', [
+  z.object({
+    ...AgentClientToolFields,
+    parameters: StrictClientToolParametersSchema,
+    strict: z.literal(true),
+  }).strict(),
+  z.object({
+    ...AgentClientToolFields,
+    parameters: NonStrictClientToolParametersSchema,
+    strict: z.literal(false),
+  }).strict(),
+])
 
 const AgentManifestFileSchema = z.object({
   name: z.string().trim().min(1).max(100),

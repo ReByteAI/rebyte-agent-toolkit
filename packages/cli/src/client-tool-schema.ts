@@ -125,6 +125,7 @@ function validateStrictSchemaNode(
     root: boolean
     depth: number
     state: StrictSchemaValidationState
+    requireAllProperties: boolean
   },
 ): void {
   if (options.depth > MAX_SCHEMA_DEPTH) {
@@ -219,6 +220,7 @@ function validateStrictSchemaNode(
             root: false,
             depth: options.depth + 1,
             state: options.state,
+            requireAllProperties: options.requireAllProperties,
           },
         )
       }
@@ -245,23 +247,35 @@ function validateStrictSchemaNode(
       }
     }
 
-    if (
+    if (value.required === undefined && !options.requireAllProperties) {
+      // Non-strict tools may omit required so object properties remain optional.
+    } else if (
       !Array.isArray(value.required)
       || value.required.some((item) => typeof item !== 'string')
     ) {
-      addSchemaIssue(context, [...path, 'required'], 'is required and must be a string array')
+      addSchemaIssue(
+        context,
+        [...path, 'required'],
+        options.requireAllProperties
+          ? 'is required and must be a string array'
+          : 'must be a string array',
+      )
     } else if (isPlainObject(value.properties)) {
       const propertyNames = Object.keys(value.properties)
       const requiredNames = value.required as string[]
-      if (
-        new Set(requiredNames).size !== requiredNames.length
-        || requiredNames.length !== propertyNames.length
-        || propertyNames.some((name) => !requiredNames.includes(name))
-      ) {
+      const hasDuplicates = new Set(requiredNames).size !== requiredNames.length
+      const containsUnknownProperty = requiredNames.some(
+        (name) => !propertyNames.includes(name),
+      )
+      const omitsProperty = options.requireAllProperties
+        && propertyNames.some((name) => !requiredNames.includes(name))
+      if (hasDuplicates || containsUnknownProperty || omitsProperty) {
         addSchemaIssue(
           context,
           [...path, 'required'],
-          'must contain every property name exactly once',
+          options.requireAllProperties
+            ? 'must contain every property name exactly once'
+            : 'must contain only property names, without duplicates',
         )
       }
     }
@@ -286,6 +300,7 @@ function validateStrictSchemaNode(
         root: false,
         depth: options.depth + 1,
         state: options.state,
+        requireAllProperties: options.requireAllProperties,
       })
     }
   } else {
@@ -305,6 +320,7 @@ function validateStrictSchemaNode(
           root: false,
           depth: options.depth + 1,
           state: options.state,
+          requireAllProperties: options.requireAllProperties,
         })
       }
     }
@@ -337,6 +353,7 @@ function validateStrictSchemaNode(
           root: false,
           depth: options.depth + 1,
           state: options.state,
+          requireAllProperties: options.requireAllProperties,
         })
       }
     }
@@ -505,16 +522,22 @@ function validateStrictSchemaNode(
   }
 }
 
-export const StrictClientToolParametersSchema = z.record(z.unknown())
-  .refine(isJsonValue, 'parameters must contain only JSON values')
-  .superRefine((parameters, context) => {
-    validateStrictSchemaNode(parameters, [], context, {
-      root: true,
-      depth: 1,
-      state: {
-        propertyCount: 0,
-        stringLength: 0,
-        enumValueCount: 0,
-      },
+function createClientToolParametersSchema(requireAllProperties: boolean) {
+  return z.record(z.unknown())
+    .refine(isJsonValue, 'parameters must contain only JSON values')
+    .superRefine((parameters, context) => {
+      validateStrictSchemaNode(parameters, [], context, {
+        root: true,
+        depth: 1,
+        state: {
+          propertyCount: 0,
+          stringLength: 0,
+          enumValueCount: 0,
+        },
+        requireAllProperties,
+      })
     })
-  })
+}
+
+export const StrictClientToolParametersSchema = createClientToolParametersSchema(true)
+export const NonStrictClientToolParametersSchema = createClientToolParametersSchema(false)

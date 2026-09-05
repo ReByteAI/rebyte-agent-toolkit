@@ -65,6 +65,11 @@ every object lists all properties in `required` and sets
 references, string and array bounds, and rejects unsupported keywords such as
 `default`.
 
+Set `strict = false` when the function has optional parameters. In that mode,
+`required` may be omitted or contain any non-duplicated subset of the object's
+properties. The same schema keywords, size limits, and
+`additionalProperties = false` requirement still apply.
+
 The Agent emits a standard Responses `function_call`. Execute it in your
 server or application, then submit a `function_call_output` in the same
 Conversation with the official OpenAI SDK. The CLI manages the definition; it
