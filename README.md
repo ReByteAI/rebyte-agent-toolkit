@@ -11,7 +11,7 @@ management CLI and optional browser UI layers.
 - [Create an API key](https://app.rebyte.ai/settings/api-keys)
 - [Hosted App Kit](https://rebyte-agent-app-kit.cctools.workers.dev) (`@rebyte.ai` access)
 
-## Two interfaces
+## Interfaces
 
 | Task | Interface |
 |---|---|
@@ -57,9 +57,22 @@ MCP servers, and credentials come from the managed Agent configuration.
 
 Client tool definitions also belong to the managed Agent configuration. When
 an Agent emits a standard `function_call`, execute it in the host application
-and submit all returned `function_call_output` items through the official
-OpenAI SDK in the same Conversation. No Rebyte Responses SDK or OpenAI SDK
-modification is required.
+and return `function_call_output` items with the official OpenAI SDK in the
+same Conversation. Use `responses.create` to continue immediately, providing
+all pending outputs together. Or use `conversations.items.create` to store
+outputs without running the model; resolve all pending calls before the next
+user turn. No Rebyte Responses client is required.
+
+Text arrives during model generation, including commentary before tool calls.
+A multi-step Run can return several message items. Render `response.output`
+in order; `output_text` is their text concatenated without added separators.
+The official SDK's `responses.stream()` and `finalResponse()` helpers also
+work. See the [streaming contract](https://rebyte.ai/docs/agent-api/streaming).
+
+Completed Responses expose `usage` once their stored Agent Loop model-call
+records and token details are complete. It remains `null` for running Responses,
+pending records, or historical records without those details. Retrieve the
+same Response to check again; Sandbox coding-agent calls are not included.
 
 ## Configure with the Rebyte CLI
 
@@ -73,6 +86,21 @@ rebyte agent create -f agent.toml
 
 The CLI validates, creates, applies, and exports organization-scoped API
 Agents. It does not execute Responses.
+
+Remote MCP servers can live with the rest of the Agent definition instead of
+requiring a separate registration step:
+
+```toml
+[[mcp_servers]]
+type = "url"
+name = "storefront"
+url = "${STOREFRONT_MCP_URL}"
+```
+
+The CLI resolves a complete `${VARIABLE_NAME}` value from its environment and
+fails before calling the API when the variable is unset or empty. Existing
+`capabilities` declarations remain compatible. Exported Agents use a canonical
+`type = "custom"` MCP entry with the server ID returned by Rebyte.
 
 ## Headless React
 
@@ -153,6 +181,10 @@ pnpm dev
 
 Open <http://127.0.0.1:4100>. The server on port `4101` uses the official
 OpenAI SDK and forwards the SSE body without exposing the organization key.
+
+The Node example streams uploads to the signed storage URL with the incoming
+`Content-Length` (browsers supply it for a File). Custom upload clients must
+also send the byte length; unbounded chunked uploads are rejected with 411.
 
 ```sh
 pnpm test:live

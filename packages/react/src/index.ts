@@ -16,7 +16,11 @@ export {
 export {
   AgentTransportError,
   type ResponseObject,
+  type ResponseUsage,
   type ResponseState,
   type ResponseStreamEvent,
   type ToolCallState,
+  type ResponseMessage,
+  type ResponseFunctionCall,
+  type TextMessageState,
 } from './responses.js'

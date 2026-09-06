@@ -55,7 +55,7 @@ interface State {
 
 type Action =
   | { type: 'start'; userId: string; assistantId: string; input: AgentChatInput }
-  | { type: 'event'; assistantId: string; event: ResponseStreamEvent }
+  | { type: 'event'; assistantId: string; event: ResponseStreamEvent; responseState: ResponseState }
   | { type: 'error'; assistantId: string; error: Error }
   | { type: 'cancel'; assistantId: string }
   | { type: 'reset'; messages: AgentChatMessage[]; conversationId: string | null }
@@ -119,10 +119,12 @@ function reducer(state: State, action: Action): State {
         : state.error,
       messages: state.messages.map((message) => {
         if (message.id !== action.assistantId || !message.response) return message
-        const nextResponse = reduceResponseState(message.response, action.event)
+        const nextResponse = action.responseState
         return {
           ...message,
-          content: nextResponse.outputText,
+          // Separate model-step messages for presentation. API output_text is
+          // still the OpenAI-compatible concatenation without extra separators.
+          content: nextResponse.textMessages.map(item => item.text).join('\n\n'),
           status: terminal ? 'completed' : failed ? 'failed' : 'streaming',
           responseId: nextResponse.responseId,
           response: nextResponse,
@@ -203,6 +205,7 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
     dispatch({ type: 'start', userId, assistantId, input: normalized })
 
     let terminal: ResponseObject | null = null
+    let responseState = createResponseState()
     try {
       const stream = await transport.stream({
         input: normalized.attachments.length > 0 ? normalized : normalized.text,
@@ -223,8 +226,11 @@ export function useRebyteChat(options: UseRebyteChatOptions): RebyteChat {
           }
           conversationIdRef.current = eventConversationId
         }
+        // Validate in the async transport path so protocol errors reject send()
+        // and reach onError rather than throwing during a React render.
+        responseState = reduceResponseState(responseState, event)
         onEvent?.(event)
-        dispatch({ type: 'event', assistantId, event })
+        dispatch({ type: 'event', assistantId, event, responseState })
         if (event.type === 'response.completed') {
           terminal = eventResponse(event)
           if (!terminal) throw new Error('response.completed did not include a Response object')

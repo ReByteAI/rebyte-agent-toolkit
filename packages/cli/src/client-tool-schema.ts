@@ -1,4 +1,11 @@
 import { z } from 'zod'
+import Ajv from 'ajv'
+import addFormats from 'ajv-formats'
+
+// Match the Agent API's schema compilation, including local $ref resolution
+// and Unicode regular expressions. Shape validation alone is not sufficient.
+const ajv = new Ajv({ allErrors: true, allowUnionTypes: true, strict: false })
+addFormats(ajv)
 
 const STRICT_SCHEMA_TYPES = new Set<string>([
   'string',
@@ -461,7 +468,7 @@ function validateStrictSchemaNode(
       addSchemaIssue(context, [...path, 'pattern'], 'must be a string')
     } else {
       try {
-        new RegExp(value.pattern)
+        new RegExp(value.pattern, 'u')
       } catch {
         addSchemaIssue(context, [...path, 'pattern'], 'must be a valid regular expression')
       }
@@ -536,6 +543,11 @@ function createClientToolParametersSchema(requireAllProperties: boolean) {
         },
         requireAllProperties,
       })
+      try {
+        ajv.compile(parameters)
+      } catch (error) {
+        addSchemaIssue(context, [], `Invalid JSON Schema: ${error instanceof Error ? error.message : String(error)}`)
+      }
     })
 }
 

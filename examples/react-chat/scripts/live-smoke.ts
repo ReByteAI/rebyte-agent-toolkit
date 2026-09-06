@@ -4,7 +4,7 @@ import OpenAI from 'openai'
 
 const apiKey = process.env.REBYTE_API_KEY
 const agentId = process.env.REBYTE_AGENT_ID
-const baseURL = process.env.REBYTE_API_URL ?? process.env.REBYTE_BASE_URL
+const baseURL = process.env.REBYTE_API_URL ?? process.env.REBYTE_BASE_URL ?? 'https://api.rebyte.ai/v1'
 if (!apiKey || !agentId) {
   throw new Error('Set REBYTE_API_KEY and REBYTE_AGENT_ID to run the live smoke test')
 }
@@ -12,7 +12,7 @@ const model = agentId
 
 const client = new OpenAI({
   apiKey,
-  ...(baseURL ? { baseURL } : {}),
+  baseURL,
 })
 let conversationId: string | null = null
 

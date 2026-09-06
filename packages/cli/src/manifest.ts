@@ -11,6 +11,7 @@ export const AGENT_MODEL_IDS = [
   'deepseek-v4-pro',
   'glm-5.3',
   'qwen3.8-max',
+  'gemini-3.8-flash',
   'kimi-k3',
   'claude-sonnet-5',
   'claude-opus-5',
@@ -55,6 +56,7 @@ const REPO_RELATIVE_DIRECTORY_PATTERN =
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const CLIENT_TOOL_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
+const ENVIRONMENT_REFERENCE_PATTERN = /^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$/
 const INTERNAL_CAPABILITIES = new Set<string>(INTERNAL_CAPABILITY_IDS)
 
 const AgentSkillSchema = z.object({
@@ -104,6 +106,19 @@ const AgentClientToolSchema = z.discriminatedUnion('strict', [
   }).strict(),
 ])
 
+const AgentMcpServerManifestSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('url'),
+    name: z.string().trim().min(1).max(100),
+    url: z.string().trim().min(1).max(2_000),
+  }).strict(),
+  z.object({
+    type: z.literal('custom'),
+    name: z.string().trim().min(1).max(100).optional(),
+    server_id: z.string().regex(UUID_PATTERN, 'server_id must be a UUID'),
+  }).strict(),
+])
+
 const AgentManifestFileSchema = z.object({
   name: z.string().trim().min(1).max(100),
   description: z.string().trim().max(500).optional(),
@@ -112,6 +127,7 @@ const AgentManifestFileSchema = z.object({
   prompt: z.string().max(100_000).optional(),
   prompt_file: z.string().trim().min(1).optional(),
   capabilities: z.array(z.string().trim().min(1)).max(64).optional(),
+  mcp_servers: z.array(AgentMcpServerManifestSchema).max(64).optional(),
   skills: z.array(AgentSkillSchema).max(128).optional(),
   client_tools: z.array(AgentClientToolSchema).max(64).optional(),
   network_policy: AgentNetworkPolicySchema.optional(),
@@ -124,6 +140,24 @@ const AgentManifestFileSchema = z.object({
     })
   }
   validateUnique(manifest.capabilities ?? [], 'capability', ['capabilities'], context)
+  validateUnique(
+    (manifest.mcp_servers ?? []).map((server) => server.type === 'url'
+      ? `url:${server.name}`
+      : `custom:${server.server_id}`),
+    'MCP server',
+    ['mcp_servers'],
+    context,
+  )
+  if (
+    (manifest.capabilities?.length ?? DEFAULT_CAPABILITY_IDS.length)
+      + (manifest.mcp_servers?.length ?? 0) > 64
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['mcp_servers'],
+      message: 'capabilities and mcp_servers may contain at most 64 entries in total',
+    })
+  }
   validateUnique(
     (manifest.skills ?? []).map((skill) => `${skill.repo}:${skill.path}`),
     'skill',
@@ -155,7 +189,8 @@ export type AgentClientTool = z.infer<typeof AgentClientToolSchema>
 export type AgentMcpServer =
   | { kind: 'internal'; name: string }
   | { kind: 'composio'; toolkit: string }
-  | { kind: 'custom'; serverId: string }
+  | { kind: 'custom'; serverId: string; name?: string }
+  | { type: 'url'; name: string; url: string }
 
 export interface ResolvedAgentManifest {
   name: string
@@ -222,6 +257,9 @@ function capabilityToMcpServer(capability: string): AgentMcpServer {
 }
 
 function mcpServerToCapability(server: AgentMcpServer): string {
+  if (!('kind' in server)) {
+    throw new Error('URL MCP servers cannot be serialized as capabilities')
+  }
   if (server.kind === 'internal') {
     if (!INTERNAL_CAPABILITIES.has(server.name)) {
       throw new Error(`Agent contains an unsupported internal capability: ${server.name}`)
@@ -231,6 +269,43 @@ function mcpServerToCapability(server: AgentMcpServer): string {
   if (server.kind === 'composio') return `composio:${server.toolkit}`
   if (server.kind === 'custom') return `custom:${server.serverId}`
   throw new Error('Agent contains an unsupported MCP server')
+}
+
+function resolveEnvironmentReference(
+  value: string,
+  manifestPath: string,
+  index: number,
+): string {
+  const match = ENVIRONMENT_REFERENCE_PATTERN.exec(value)
+  if (!match) return value
+  const variable = match[1]
+  if (!variable) return value
+  const resolved = process.env[variable]
+  if (!resolved) {
+    throw new Error(
+      `${manifestPath}: mcp_servers.${index}.url references unset or empty environment variable ${variable}`,
+    )
+  }
+  return resolved
+}
+
+function requireHttpUrl(value: string, manifestPath: string, index: number): string {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new Error(`${manifestPath}: mcp_servers.${index}.url must be a valid URL`)
+  }
+  if (url.protocol !== 'https:') {
+    throw new Error(`${manifestPath}: mcp_servers.${index}.url must use https`)
+  }
+  if (url.username.length > 0 || url.password.length > 0 || url.hash.length > 0) {
+    throw new Error(`${manifestPath}: mcp_servers.${index}.url must not contain credentials or a fragment`)
+  }
+  if (url.toString().length > 2_000) {
+    throw new Error(`${manifestPath}: mcp_servers.${index}.url must be at most 2000 characters`)
+  }
+  return value
 }
 
 function formatZodError(error: z.ZodError): string {
@@ -286,13 +361,33 @@ export function readAgentManifest(path: string): ResolvedAgentManifest {
   }
 
   const capabilities = manifest.capabilities ?? [...DEFAULT_CAPABILITY_IDS]
+  const declaredMcpServers: AgentMcpServer[] = (manifest.mcp_servers ?? []).map(
+    (server, index) => {
+      if (server.type === 'custom') {
+        return {
+          kind: 'custom',
+          serverId: server.server_id,
+          ...(server.name === undefined ? {} : { name: server.name }),
+        }
+      }
+      const resolvedUrl = resolveEnvironmentReference(server.url, absolutePath, index)
+      return {
+        type: 'url',
+        name: server.name,
+        url: requireHttpUrl(resolvedUrl, absolutePath, index),
+      }
+    },
+  )
   return {
     name: manifest.name,
     description: manifest.description ?? null,
     instructions,
     model: manifest.llm ?? DEFAULT_MODEL,
     maxSteps: manifest.max_steps ?? DEFAULT_MAX_STEPS,
-    mcpServers: capabilities.map(capabilityToMcpServer),
+    mcpServers: [
+      ...capabilities.map(capabilityToMcpServer),
+      ...declaredMcpServers,
+    ],
     skills: manifest.skills ?? [],
     clientTools: manifest.client_tools ?? [],
     networkPolicy: manifest.network_policy ?? null,
@@ -311,13 +406,35 @@ export function serializeAgentManifest(agent: RebyteAgentRecord): string {
       )
     }
   }
+  const capabilities: string[] = []
+  const mcpServers: Array<Record<string, string>> = []
+  for (const server of agent.mcpServers) {
+    if ('kind' in server && server.kind !== 'custom') {
+      capabilities.push(mcpServerToCapability(server))
+      continue
+    }
+    if ('kind' in server) {
+      mcpServers.push({
+        type: 'custom',
+        ...(server.name === undefined ? {} : { name: server.name }),
+        server_id: server.serverId,
+      })
+      continue
+    }
+    mcpServers.push({
+      type: 'url',
+      name: server.name,
+      url: server.url,
+    })
+  }
   const document: Record<string, unknown> = {
     name: agent.name,
     ...(agent.description === null ? {} : { description: agent.description }),
     llm: agent.model,
     max_steps: agent.maxSteps,
-    capabilities: agent.mcpServers.map(mcpServerToCapability),
+    capabilities,
     prompt: agent.instructions,
+    ...(mcpServers.length === 0 ? {} : { mcp_servers: mcpServers }),
     ...(agent.skills.length === 0 ? {} : { skills: agent.skills }),
     ...(agent.clientTools.length === 0
       ? {}

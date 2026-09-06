@@ -10,7 +10,9 @@ const packageDir = dirname(dirname(fileURLToPath(import.meta.url)))
 const cliPath = join(packageDir, 'dist', 'cli.js')
 const fixtureDir = mkdtempSync(join(tmpdir(), 'rebyte-agent-cli-'))
 const agentId = 'c05ff691-8e23-4c3c-9d77-29d5783387e5'
+const resolvedMcpServerId = '6cc3cf22-d268-4f21-b34b-3e6dc48bab96'
 let agent = null
+let createPayload = null
 let requestCount = 0
 
 const server = createServer(async (request, response) => {
@@ -18,7 +20,15 @@ const server = createServer(async (request, response) => {
   assert.equal(request.headers.api_key, 'local_test_key')
   const body = await readJsonBody(request)
   if (request.method === 'POST' && request.url === '/v1/agents') {
-    agent = { id: agentId, object: 'agent', ...body }
+    createPayload = body
+    agent = {
+      id: agentId,
+      object: 'agent',
+      ...body,
+      mcpServers: body.mcpServers.map((server) => server.type === 'url'
+        ? { kind: 'custom', serverId: resolvedMcpServerId, name: server.name }
+        : server),
+    }
     return sendJson(response, 201, { agent })
   }
   if (request.method === 'PATCH' && request.url === `/v1/agents/${agentId}`) {
@@ -34,6 +44,8 @@ const server = createServer(async (request, response) => {
 })
 
 try {
+  process.env.REBYTE_SMOKE_MCP_URL = 'https://mcp.example.com/storefront/mcp'
+  delete process.env.REBYTE_SMOKE_MISSING_MCP_URL
   writeFileSync(join(fixtureDir, 'prompt.md'), 'Research carefully.\n', 'utf8')
   writeFileSync(join(fixtureDir, 'agent.toml'), `
 name = "Research Agent"
@@ -46,6 +58,16 @@ capabilities = [
   "composio:github",
   "custom:550e8400-e29b-41d4-a716-446655440000"
 ]
+
+[[mcp_servers]]
+type = "url"
+name = "storefront"
+url = "\${REBYTE_SMOKE_MCP_URL}"
+
+[[mcp_servers]]
+type = "custom"
+name = "inventory"
+server_id = "9ba16a85-a580-4822-aa52-d937803f86c9"
 
 [[skills]]
 repo = "rebyteai/skills"
@@ -95,9 +117,27 @@ allow_public_traffic = false
     'agent', 'create', '-f', join(fixtureDir, 'agent.toml'), ...common,
   ])
   assert.match(created.stdout, new RegExp(`Created Agent ${agentId}`))
+  assert.ok(createPayload)
   assert.equal(agent.instructions, 'Research carefully.\n')
+  assert.deepEqual(createPayload.mcpServers.slice(2), [
+    { kind: 'custom', serverId: '550e8400-e29b-41d4-a716-446655440000' },
+    {
+      type: 'url',
+      name: 'storefront',
+      url: 'https://mcp.example.com/storefront/mcp',
+    },
+    {
+      kind: 'custom',
+      serverId: '9ba16a85-a580-4822-aa52-d937803f86c9',
+      name: 'inventory',
+    },
+  ])
   assert.equal(agent.mcpServers[1].kind, 'composio')
-  assert.equal(agent.mcpServers[2].kind, 'custom')
+  assert.deepEqual(agent.mcpServers[3], {
+    kind: 'custom',
+    serverId: resolvedMcpServerId,
+    name: 'storefront',
+  })
   assert.deepEqual(agent.clientTools, [{
     type: 'function',
     name: 'present_research',
@@ -133,11 +173,32 @@ allow_public_traffic = false
   assert.match(exported.stdout, /Exported Agent/)
   const exportedText = readFileSync(exportPath, 'utf8')
   assert.match(exportedText, /composio:github/)
+  assert.match(exportedText, /\[\[mcp_servers\]\]/)
+  assert.match(exportedText, /type = "custom"/)
+  assert.match(exportedText, new RegExp(`server_id = "${resolvedMcpServerId}"`))
+  assert.doesNotMatch(exportedText, /mcp\.example\.com/)
   assert.match(exportedText, /\[\[skills\]\]/)
   assert.match(exportedText, /\[\[client_tools\]\]/)
   assert.match(exportedText, /\[client_tools\.parameters\.properties\.title\]/)
   assert.match(exportedText, /\[network_policy\]/)
   await runCli(['agent', 'validate', '-f', exportPath])
+
+  writeFileSync(join(fixtureDir, 'missing-env.toml'), `
+name = "Missing MCP environment"
+capabilities = []
+
+[[mcp_servers]]
+type = "url"
+name = "storefront"
+url = "\${REBYTE_SMOKE_MISSING_MCP_URL}"
+`, 'utf8')
+  const missingEnvironment = await runCli([
+    'agent', 'validate', '-f', join(fixtureDir, 'missing-env.toml'),
+  ], false)
+  assert.match(
+    missingEnvironment.stderr,
+    /references unset or empty environment variable REBYTE_SMOKE_MISSING_MCP_URL/,
+  )
 
   const refusedOverwrite = await runCli([
     'agent', 'export', agentId, '-o', exportPath, ...common,

@@ -98,6 +98,13 @@ app.post('/api/files', async (context) => {
   if (!context.req.raw.body) {
     return context.json({ error: { message: 'File body is required' } }, 400)
   }
+  const contentLength = context.req.header('Content-Length')
+  if (contentLength === undefined) {
+    return context.json({ error: { message: 'File upload requires Content-Length' } }, 411)
+  }
+  if (!/^\d+$/.test(contentLength) || !Number.isSafeInteger(Number(contentLength))) {
+    return context.json({ error: { message: 'Invalid file Content-Length' } }, 400)
+  }
 
   const reservationResponse = await fetch(`${baseURL}/files`, {
     method: 'POST',
@@ -115,14 +122,15 @@ app.post('/api/files', async (context) => {
     })
   }
   const reservation = fileReservation(await reservationResponse.json())
-  const contentLength = context.req.header('Content-Length')
-  if (contentLength && Number(contentLength) > reservation.maxFileSize) {
+  if (Number(contentLength) > reservation.maxFileSize) {
     return context.json({ error: { message: 'File exceeds the upload limit' } }, 413)
   }
 
   const uploadInit: RequestInit & { duplex: 'half' } = {
     method: 'PUT',
-    headers: { 'Content-Type': contentType },
+    // Node fetch otherwise uses chunked transfer encoding for this stream;
+    // S3 signed PUT rejects it with 501. Preserve the browser File's length.
+    headers: { 'Content-Type': contentType, 'Content-Length': contentLength },
     body: context.req.raw.body,
     signal: context.req.raw.signal,
     duplex: 'half',

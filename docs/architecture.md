@@ -71,6 +71,13 @@ state; it is not a Conversation database.
 connected capabilities. The CLI or Agent REST API stores that definition. The
 returned Agent ID is then used as `model` with the official OpenAI SDK.
 
+A remote MCP dependency can be declared as a URL in `agent.toml`. The CLI
+expands a complete `${VARIABLE_NAME}` URL value and sends the declaration to
+the Agent API. The control plane discovers or reuses the organization-scoped
+MCP server and stores a canonical custom-server reference on the Agent. Export
+therefore writes `type = "custom"` plus `server_id`, while execution always
+uses the stored managed configuration rather than reading the local manifest.
+
 MCP tools execute behind Rebyte. Client tools execute in the host application:
 
 ```text
@@ -82,3 +89,22 @@ Host application ── function_call_output ───> Response B, same Convers
 The function-call objects use the standard Responses format. The host does not
 resend tool definitions with each Response and does not need a modified OpenAI
 SDK.
+
+Alternatively, `conversations.items.create(conversationId, { items: outputs })`
+stores client-tool outputs without creating another Response or invoking the
+model. The next user turn receives them from Conversation history. App Kit
+shows pending client calls but does not implement application-specific tools.
+
+## Streaming projection
+
+Web chat and Responses consume the same ordered server Run events through
+separate protocol adapters. Responses emits one message per model step with
+visible text, interleaved with tools in output order. React accumulates deltas
+by message ID and output index; it validates completed text against the
+stream. The optional UI renders that same order.
+
+The database owns final results. A stream disconnect is not a Run cancellation.
+If a model retries after partial output, the stream ends with
+`response_stream_restarted` instead of concatenating text from two attempts.
+The host can retrieve the Response by ID to reconcile; React reports this
+error and keeps the Response ID, but does not automatically poll or resubmit.

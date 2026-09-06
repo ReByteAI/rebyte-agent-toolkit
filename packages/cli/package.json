@@ -8,7 +8,7 @@
     "url": "git+https://github.com/ReByteAI/rebyte-agent-toolkit.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/ReByteAI/rebyte-agent-toolkit#rebyte-cli",
+  "homepage": "https://github.com/ReByteAI/rebyte-agent-toolkit#configure-with-the-rebyte-cli",
   "bugs": "https://github.com/ReByteAI/rebyte-agent-toolkit/issues",
   "engines": {
     "node": ">=22"
@@ -37,6 +37,8 @@
     "toml"
   ],
   "dependencies": {
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1",
     "smol-toml": "^1.8.0",
     "zod": "^3.25.76"
   },

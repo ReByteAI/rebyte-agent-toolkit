@@ -340,20 +340,25 @@ function Message({ message }: { message: AgentChatMessage }) {
       </div>
     )
   }
-  const tools = message.response?.toolCalls ?? []
+  const parts = message.response === null ? [] : [
+    ...message.response.toolCalls.map(tool => ({ kind: 'tool' as const, outputIndex: tool.outputIndex, tool })),
+    ...message.response.textMessages.map(text => ({ kind: 'text' as const, outputIndex: text.outputIndex, text })),
+  ].sort((a, b) => a.outputIndex - b.outputIndex)
   return (
     <div className={`rb-assistant-turn is-${message.status}`}>
-      {tools.length > 0 && (
-        <div className="rb-tools">
-          {tools.map((tool) => (
-            <div className={`rb-tool is-${tool.status}`} key={tool.id}>
-              <span className="rb-tool-mark">{tool.status === 'completed' ? '✓' : tool.status === 'failed' ? '!' : '·'}</span>
-              <span><strong>{tool.name}</strong><small>{tool.serverLabel} · {tool.status}</small></span>
+      {parts.map(part => part.kind === 'tool' ? (
+        <div className="rb-tools" key={part.tool.id}>
+            <div className={`rb-tool is-${part.tool.status}`}>
+              <span className="rb-tool-mark">{part.tool.status === 'completed' ? '✓' : part.tool.status === 'failed' ? '!' : '·'}</span>
+              <span><strong>{part.tool.name}</strong><small>{part.tool.serverLabel} · {part.tool.status === 'awaiting_output' ? 'Awaiting client output' : part.tool.status}</small></span>
             </div>
-          ))}
         </div>
-      )}
-      {message.content && (
+      ) : (
+        <div className="rb-message rb-assistant-message" key={part.text.id}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text.text}</ReactMarkdown>
+        </div>
+      ))}
+      {parts.length === 0 && message.content && (
         <div className="rb-message rb-assistant-message">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
         </div>
