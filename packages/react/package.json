@@ -1,6 +1,6 @@
 {
   "name": "@rebyte/agent-react",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Headless React hooks and transports for Rebyte Agents",
   "license": "MIT",
   "repository": {
@@ -10,10 +10,15 @@
   },
   "homepage": "https://github.com/ReByteAI/rebyte-agent-toolkit#readme",
   "bugs": "https://github.com/ReByteAI/rebyte-agent-toolkit/issues",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,7 +33,9 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react",
     "typecheck": "tsc --noEmit"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "react": ">=18.2.0"
   },

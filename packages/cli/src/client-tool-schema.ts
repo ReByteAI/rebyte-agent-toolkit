@@ -215,10 +215,13 @@ function validateStrictSchemaNode(
 
   const isObjectSchema = declaredTypes.includes('object')
   if (isObjectSchema) {
-    if (!isPlainObject(value.properties)) {
+    const properties = value.properties === undefined && !options.requireAllProperties
+      ? {}
+      : value.properties
+    if (!isPlainObject(properties)) {
       addSchemaIssue(context, [...path, 'properties'], 'is required and must be an object')
     } else {
-      for (const [name, propertySchema] of Object.entries(value.properties)) {
+      for (const [name, propertySchema] of Object.entries(properties)) {
         validateStrictSchemaNode(
           propertySchema,
           [...path, 'properties', name],
@@ -232,7 +235,7 @@ function validateStrictSchemaNode(
         )
       }
 
-      const propertyNames = Object.keys(value.properties)
+      const propertyNames = Object.keys(properties)
       options.state.propertyCount += propertyNames.length
       options.state.stringLength += propertyNames.reduce(
         (total, name) => total + name.length,
@@ -267,13 +270,13 @@ function validateStrictSchemaNode(
           ? 'is required and must be a string array'
           : 'must be a string array',
       )
-    } else if (isPlainObject(value.properties)) {
-      const propertyNames = Object.keys(value.properties)
+    } else if (isPlainObject(properties)) {
+      const propertyNames = Object.keys(properties)
       const requiredNames = value.required as string[]
       const hasDuplicates = new Set(requiredNames).size !== requiredNames.length
-      const containsUnknownProperty = requiredNames.some(
-        (name) => !propertyNames.includes(name),
-      )
+      const containsUnknownProperty = (options.requireAllProperties
+        || value.additionalProperties === false)
+        && requiredNames.some((name) => !propertyNames.includes(name))
       const omitsProperty = options.requireAllProperties
         && propertyNames.some((name) => !requiredNames.includes(name))
       if (hasDuplicates || containsUnknownProperty || omitsProperty) {
@@ -287,8 +290,17 @@ function validateStrictSchemaNode(
       }
     }
 
-    if (value.additionalProperties !== false) {
+    if (options.requireAllProperties && value.additionalProperties !== false) {
       addSchemaIssue(context, [...path, 'additionalProperties'], 'is required and must be false')
+    }
+    if (!options.requireAllProperties && value.additionalProperties !== undefined
+      && typeof value.additionalProperties !== 'boolean') {
+      validateStrictSchemaNode(value.additionalProperties, [...path, 'additionalProperties'], context, {
+        root: false,
+        depth: options.depth + 1,
+        state: options.state,
+        requireAllProperties: false,
+      })
     }
   } else {
     for (const keyword of ['properties', 'required', 'additionalProperties']) {

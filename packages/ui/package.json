@@ -1,6 +1,6 @@
 {
   "name": "@rebyte/agent-ui",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Optional React chat UI for Rebyte Agents",
   "license": "MIT",
   "repository": {
@@ -10,10 +10,18 @@
   },
   "homepage": "https://github.com/ReByteAI/rebyte-agent-toolkit#readme",
   "bugs": "https://github.com/ReByteAI/rebyte-agent-toolkit/issues",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
-  "sideEffects": ["./src/styles.css"],
-  "files": ["dist", "src/styles.css", "README.md"],
+  "sideEffects": [
+    "./src/styles.css"
+  ],
+  "files": [
+    "dist",
+    "src/styles.css",
+    "README.md"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,7 +37,9 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react --external react-dom",
     "typecheck": "tsc --noEmit"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@rebyte/agent-react": "workspace:*",
     "react-markdown": "^10.1.0",
