@@ -116,8 +116,8 @@ pass request-level `tools` or `previous_response_id`.
 
 ## Agent network policy
 
-Agents inherit the organization network policy unless `agent.toml` contains a
-complete override:
+VM creation copies the organization network default once, unless `agent.toml`
+supplies an explicit initial policy:
 
 ```toml
 [network_policy]
@@ -128,7 +128,9 @@ allow_public_traffic = false
 ```
 
 `domain_allowlist` accepts `all_domains`, `package_managers_only`, or `none`.
-The table fully replaces the organization default. Remove it and run
-`rebyte agent apply` to restore inheritance. The boundary applies to the
-Agent's shared Sandbox. Changing the effective policy takes effect when that
-Sandbox is replaced, not by starting another Conversation.
+RVM owns the policy after creation. `rebyte agent apply` writes it directly to
+the existing VM. Removing this table and applying explicitly copies the current
+organization default once; later organization changes do not affect that VM.
+Updates apply without replacing the Sandbox. Existing network connections may
+need to reconnect. Reads return the VM policy through RVM, not an Agent config
+copy in Rebyte. Custom CIDR policies use the Sandbox SDK's network policy API.
