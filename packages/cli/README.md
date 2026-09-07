@@ -89,8 +89,8 @@ maxItems = 20
 items = { type = "string" }
 ```
 
-The parameter schema uses the OpenAI strict subset. Its root is an object;
-every object lists all properties in `required` and sets
+The parameter schema uses a bounded JSON Schema subset with an object root.
+With `strict = true`, every object lists all properties in `required` and sets
 `additionalProperties = false`. Nullable fields remain required and include
 `"null"` in their type. The CLI accepts draft-07 `definitions`, `$defs`,
 references, string and array bounds, and rejects unsupported keywords such as
@@ -99,10 +99,11 @@ references, string and array bounds, and rejects unsupported keywords such as
 Validation also compiles references and regular expressions using the same
 JSON Schema engine as the Agent API. Unresolved `$ref` values fail locally.
 
-Set `strict = false` when the function has optional parameters. In that mode,
-`required` may be omitted or contain any non-duplicated subset of the object's
-properties. The same schema keywords, size limits, and
-`additionalProperties = false` requirement still apply.
+Set `strict = false` for optional parameters or dictionaries. `properties` and
+`required` may be omitted. `additionalProperties` may be omitted, a boolean,
+or a supported value schema such as `{ type = "string" }`. The same schema
+keywords and size limits apply, including inside dictionary value schemas.
+The API still validates generated arguments against the stored schema.
 
 The Agent emits a standard Responses `function_call`. Execute it in your
 server or application, then submit a `function_call_output` in the same
