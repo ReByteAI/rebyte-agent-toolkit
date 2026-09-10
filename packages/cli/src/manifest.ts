@@ -60,6 +60,7 @@ const ENVIRONMENT_REFERENCE_PATTERN = /^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$/
 const INTERNAL_CAPABILITIES = new Set<string>(INTERNAL_CAPABILITY_IDS)
 
 const AgentSkillSchema = z.object({
+  ref: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/).refine(ref => !ref.includes('..')).optional(),
   repo: z.string().min(1).max(300).regex(
     GITHUB_REPO_PATTERN,
     'repo must be a canonical GitHub owner/repo',
@@ -131,6 +132,7 @@ const AgentManifestFileSchema = z.object({
   skills: z.array(AgentSkillSchema).max(128).optional(),
   client_tools: z.array(AgentClientToolSchema).max(64).optional(),
   network_policy: AgentNetworkPolicySchema.optional(),
+  sandbox_strategy: z.enum(['agent_shared', 'session_dedicated']).optional(),
 }).strict().superRefine((manifest, context) => {
   if (manifest.prompt !== undefined && manifest.prompt_file !== undefined) {
     context.addIssue({
@@ -202,6 +204,7 @@ export interface ResolvedAgentManifest {
   skills: AgentSkill[]
   clientTools: AgentClientTool[]
   networkPolicy: AgentNetworkPolicy | null
+  sandboxStrategy?: 'agent_shared' | 'session_dedicated'
 }
 
 export interface RebyteAgentRecord extends ResolvedAgentManifest {
@@ -391,6 +394,7 @@ export function readAgentManifest(path: string): ResolvedAgentManifest {
     skills: manifest.skills ?? [],
     clientTools: manifest.client_tools ?? [],
     networkPolicy: manifest.network_policy ?? null,
+    ...(manifest.sandbox_strategy === undefined ? {} : { sandboxStrategy: manifest.sandbox_strategy }),
   }
 }
 
@@ -433,6 +437,7 @@ export function serializeAgentManifest(agent: RebyteAgentRecord): string {
     llm: agent.model,
     max_steps: agent.maxSteps,
     capabilities,
+    ...(agent.sandboxStrategy === undefined ? {} : { sandbox_strategy: agent.sandboxStrategy }),
     prompt: agent.instructions,
     ...(mcpServers.length === 0 ? {} : { mcp_servers: mcpServers }),
     ...(agent.skills.length === 0 ? {} : { skills: agent.skills }),
@@ -458,6 +463,7 @@ export function manifestToApiPayload(
     ...(manifest.description === null && options?.includeNullDescription !== true
       ? {}
       : { description: manifest.description }),
+    ...(manifest.sandboxStrategy === undefined ? {} : { sandboxStrategy: manifest.sandboxStrategy }),
     instructions: manifest.instructions,
     model: manifest.model,
     maxSteps: manifest.maxSteps,

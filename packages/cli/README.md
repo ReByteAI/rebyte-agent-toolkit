@@ -114,6 +114,33 @@ the model, append outputs with `conversations.items.create`; every pending
 call must be resolved before new user input. Each `output` is a string. Do not
 pass request-level `tools` or `previous_response_id`.
 
+## Session environments and Skills
+
+The local Agent API implementation supports an optional top-level strategy:
+
+```toml
+sandbox_strategy = "session_dedicated" # or "agent_shared"
+
+[[skills]]
+repo = "your-team/agent-skills"
+path = "skills/research"
+ref = "main" # optional branch, tag, or commit
+```
+
+`agent_shared` is the initial default. `session_dedicated` gives each new
+Session its own environment. The mode is fixed when the Agent is created;
+Sessions inherit it and cannot override it. Applying an existing Agent with a
+different mode returns a conflict; reapplying the same mode is supported.
+Create another Agent to use a different mode. Compute is allocated only when
+a tool needs it, independently of Agent and Session creation.
+
+Skills are declarations. `list_skills`, `load_skill`, and `read_skill_file`
+work without a Sandbox. First load pins the Skill bundle for that Session;
+Sandbox tools prepare that exact bundle before using it. Loading instructions
+does not execute scripts or install package/OS dependencies.
+
+These additions require the matching relay changes; they are not yet released.
+
 ## Agent network policy
 
 VM creation copies the organization network default once, unless `agent.toml`
@@ -128,9 +155,10 @@ allow_public_traffic = false
 ```
 
 `domain_allowlist` accepts `all_domains`, `package_managers_only`, or `none`.
-RVM owns the policy after creation. `rebyte agent apply` writes it directly to
-the existing VM. Removing this table and applying explicitly copies the current
-organization default once; later organization changes do not affect that VM.
-Updates apply without replacing the Sandbox. Existing network connections may
-need to reconnect. Reads return the VM policy through RVM, not an Agent config
-copy in Rebyte. Custom CIDR policies use the Sandbox SDK's network policy API.
+RVM owns the live policy after creation. With the local environment-strategy
+implementation, `rebyte agent apply` changes the declaration for future Sandbox
+allocations. Removing this table restores organization inheritance for future
+allocations. Existing Sandboxes retain their live policy and identity. Agent
+reads return the declaration; use the Sandbox network policy API to inspect or
+change a running environment, including custom CIDR policies. This changes the
+previous Agent API behavior that read and updated the live VM directly.
