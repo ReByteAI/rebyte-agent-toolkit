@@ -1,6 +1,6 @@
 # Architecture
 
-The official OpenAI SDK is the wire client. Rebyte owns execution and durable state.
+The Rebyte Agent SDK fork is the wire client. Rebyte owns execution and durable state.
 
 ```text
 agent.toml → CLI → saved Agent
@@ -17,7 +17,7 @@ Session owns its history, Turns, environment, credentials and Artifacts. A hoste
 Environment is configuration plus a stable binding to one lazily created Sandbox.
 Each message submission starts a Turn; active-Turn input queues for sequential execution.
 
-Node and Cloudflare mount the same `@rebyte/agent-server` Hono routes. The React
+Node and Cloudflare mount the same `@rebyteai/agent-server` Hono routes. The React
 transport talks only to this same-origin proxy. Organization keys stay on the
 server. A production application must persist user-to-Session ownership and check
 it on every route, including event streams, uploads and Artifact downloads. Checking

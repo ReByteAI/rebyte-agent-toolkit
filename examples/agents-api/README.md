@@ -1,13 +1,13 @@
-# Official OpenAI SDK recipes
+# Rebyte Agent SDK recipes
 
-These scripts use `openai@7.15.0` directly, without Rebyte React packages. They
+These scripts use `@rebyteai/agent-sdk`, our source fork of the OpenAI Agents API client, without React packages. No base URL is needed for Rebyte. They
 exercise the API end to end and clean up their own Agent and Session in `finally`.
 
 ```sh
 # From the repository root:
 pnpm install
+pnpm build
 export REBYTE_API_KEY='rbk_...'
-export REBYTE_BASE_URL='https://api.rebyte.ai/v1'
 # For a running local Relay instead:
 # export REBYTE_BASE_URL='http://127.0.0.1:34567/v1'
 pnpm --filter @rebyte/example-agents-api chat
@@ -54,7 +54,7 @@ const session = await client.beta.agents.sessions.create({ agent_id: agent.id,
 });
 ```
 
-`client` is the configured official SDK client; `accessToken` is obtained and
+`client` is the configured Rebyte SDK client; `accessToken` is obtained and
 authorized by your server. No environment is supplied. See
 [MCP](https://rebyte.ai/docs/agents-api/tools/mcp) and
 [Vaults](https://rebyte.ai/docs/agents-api/tools/vaults) for reusable credentials,
@@ -80,7 +80,7 @@ installed `SKILL.md` and follows its commands using `exec_command`; there are no
 separate List Skill or Run Skill tools. The [Commerce converter](https://github.com/ReByteAI/commerce-agent-starter/blob/main/examples/retail/api/rebyte_config.py)
 shows how to package checked-in Skills. Rebyte's GitHub source variant is an
 [extension](https://rebyte.ai/docs/agents-api/environments/openai-hosted), outside
-the generated OpenAI skill union.
+the upstream OpenAI skill union; the Rebyte SDK includes this variant.
 
 ## References
 

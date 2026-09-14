@@ -1,11 +1,18 @@
-# @rebyte/agent-ui
+# @rebyteai/agent-ui
+
+Install the versioned package (no repository clone required):
+
+```sh
+pnpm add @rebyteai/agent-ui@0.2.0
+```
+
 
 Optional React chat components for native Agents API Sessions.
 
 ```tsx
-import { AgentChat } from '@rebyte/agent-ui'
-import '@rebyte/agent-ui/styles.css'
-import { createAgentSessionTransport } from '@rebyte/agent-react'
+import { AgentChat } from '@rebyteai/agent-ui'
+import '@rebyteai/agent-ui/styles.css'
+import { createAgentSessionTransport } from '@rebyteai/agent-react'
 const transport = createAgentSessionTransport({ url: '/api/sessions' })
 // Inside your application:
 <AgentChat transport={transport} initialSessionId={savedSessionId} />

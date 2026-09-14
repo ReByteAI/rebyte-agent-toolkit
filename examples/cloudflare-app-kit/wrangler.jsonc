@@ -12,7 +12,6 @@
     "run_worker_first": ["/api/*"]
   },
   "vars": {
-    "REBYTE_API_URL": "https://api.rebyte.ai/v1",
     "REBYTE_AGENT_ID": ""
   }
 }

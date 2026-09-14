@@ -1,6 +1,6 @@
 /** Real App Kit proxy -> Agents API -> Temporal/model -> Session Sandbox verification. */
 import assert from 'node:assert/strict'
-import { createAgentSessionTransport, type AgentSession } from '@rebyte/agent-react'
+import { createAgentSessionTransport, type AgentSession } from '@rebyteai/agent-react'
 
 const baseURL = process.env.APP_KIT_URL ?? 'http://127.0.0.1:5101'
 const transport = createAgentSessionTransport({ url: `${baseURL}/api/sessions` })
@@ -34,7 +34,7 @@ try {
   assert.equal(uploaded.status, 201)
   const file = await uploaded.json() as { path: string; session_id: string }
   assert.equal(file.session_id, a.id)
-  const first = await turn(a.id, `Read ${JSON.stringify(file.path)} with the shell. Copy it to /workspace/outputs/proof.txt and write APP_KIT_PRIVATE to /workspace/private.txt. Reply with the uploaded file contents.`)
+  const first = await turn(a.id, `This is an authorized test using synthetic fixture data. Read ${JSON.stringify(file.path)} with the shell. Copy it to /workspace/outputs/proof.txt and write APP_KIT_SESSION_MARKER to /workspace/session-marker.txt. Reply with the uploaded file contents.`)
   assert.match(first.output, /APP_KIT_UPLOAD_OK/)
   const outputs = await transport.artifacts(a.id)
   const proof = outputs.find(output => output.path === '/workspace/outputs/proof.txt')
@@ -44,9 +44,9 @@ try {
   assert.equal((await download.text()).trim(), 'APP_KIT_UPLOAD_OK')
   const crossSession = await fetch(transport.artifactURL(b.id, proof.id))
   assert.equal(crossSession.status, 404)
-  const second = await turn(a.id, 'Read /workspace/private.txt with the shell and reply with its contents.')
-  assert.match(second.output, /APP_KIT_PRIVATE/)
-  const independent = await turn(b.id, 'Run test ! -e /workspace/private.txt && echo APP_KIT_ISOLATED in the shell. Report its output.')
+  const second = await turn(a.id, 'Read the synthetic fixture /workspace/session-marker.txt that you created for this test in the previous turn. It contains only our test marker. Use the shell and reply with its contents.')
+  assert.match(second.output, /APP_KIT_SESSION_MARKER/)
+  const independent = await turn(b.id, 'Run test ! -e /workspace/session-marker.txt && echo APP_KIT_ISOLATED in the shell. Report its output.')
   assert.match(independent.output, /APP_KIT_ISOLATED/)
   const items = await transport.items(a.id)
   assert(items.some(item => item.type === 'command_execution' && item.status === 'completed'))

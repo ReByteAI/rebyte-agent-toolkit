@@ -17,9 +17,9 @@
     "dev:cloudflare": "pnpm --filter @rebyte/example-cloudflare-app-kit dev",
     "deploy:cloudflare": "pnpm --filter @rebyte/example-cloudflare-app-kit deploy",
     "pack:release": "node scripts/pack-release.mjs",
-    "test": "pnpm --filter @rebyte/cli build && pnpm --filter @rebyte/cli smoke",
+    "test": "pnpm --filter @rebyteai/agent-sdk build && pnpm --filter @rebyteai/agent-sdk smoke && pnpm --filter @rebyteai/cli build && pnpm --filter @rebyteai/cli smoke",
     "test:live": "pnpm build && pnpm --filter @rebyte/example-react-chat test:live",
-    "typecheck": "pnpm --filter @rebyte/agent-server build && pnpm --filter @rebyte/agent-react build && pnpm --filter @rebyte/agent-ui build && pnpm -r typecheck"
+    "typecheck": "pnpm --filter @rebyteai/agent-sdk build && pnpm --filter @rebyteai/agent-server build && pnpm --filter @rebyteai/agent-react build && pnpm --filter @rebyteai/agent-ui build && pnpm -r typecheck"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

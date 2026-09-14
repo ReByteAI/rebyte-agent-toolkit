@@ -19,7 +19,7 @@ by changing their prefix.
 CLI apply replaces the saved configuration described by the manifest, including
 clearing omitted optional settings. Existing Sessions keep their snapshot. Inline
 MCP credentials belong to Session overrides; reusable credentials belong to Vaults.
-TOML cannot encode literal JSON null inside schemas. Use the official SDK with JSON
+TOML cannot encode literal JSON null inside schemas. Use the Rebyte SDK with JSON
 for those definitions; export fails rather than corrupting their meaning.
 
 Use the [runnable recipes](../examples/agents-api/README.md) to verify your new

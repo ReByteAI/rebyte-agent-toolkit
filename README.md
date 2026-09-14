@@ -1,15 +1,64 @@
 # Rebyte Agent Toolkit
 
-Build with the **official OpenAI SDK** against `https://api.rebyte.ai/v1`, using
-`client.beta.agents`. Rebyte hosts the agent loop, models, Session Sandboxes and
-Artifacts. This repository adds a configuration CLI, an optional React hook/UI,
-and Node and Cloudflare App Kit examples. It is not the OpenAI Agents SDK.
+Build with **Rebyte Agent SDK**, our maintained source fork of the OpenAI
+Agents API TypeScript client. Use `client.beta.agents` with `REBYTE_API_KEY`;
+the SDK connects to Rebyte by default. Rebyte hosts the Agent Loop, models,
+Session Sandboxes and Artifacts. AppKit adds a configuration CLI, React hooks,
+chat UI, and Node and Cloudflare server integration.
+
+```ts
+import Rebyte, { rebyteSandbox } from '@rebyteai/agent-sdk'
+const client = new Rebyte()
+const agent = await client.beta.agents.create({
+  name: 'My assistant', model: 'gpt-5.6-luna', instructions: 'Answer clearly.',
+})
+const session = await client.beta.agents.sessions.create({
+  agent_id: agent.id, environment: rebyteSandbox(),
+})
+```
+
+See [the SDK package](packages/sdk/README.md) and
+[upstream provenance](packages/sdk/UPSTREAM.md). Compatibility refers to the
+OpenAI Agents **API client**, not the separate `@openai/agents` Agent Loop library.
 
 Start with the [Rebyte guide](https://rebyte.ai/docs/agents-api/quickstart) and
 [OpenAI Agents API reference](https://developers.openai.com/api/docs/guides/agents-api/overview).
 Use Rebyte's guide for supported features and Rebyte-specific behavior.
 
-## Run the examples
+## Install a release
+
+Use Node.js 22+. You do not need to clone this repository to use the SDK.
+Install the versioned release package in your application:
+
+```sh
+pnpm add @rebyteai/agent-sdk@0.2.0
+export REBYTE_API_KEY='rbk_...'
+```
+
+For AppKit, install the components your application uses:
+
+```sh
+pnpm add @rebyteai/agent-react@0.2.0 @rebyteai/agent-ui@0.2.0 @rebyteai/agent-server@0.2.0
+```
+
+Dependencies between Rebyte packages are pinned to the same release and installed
+automatically. React/React DOM are supplied by your application. Server-only
+applications need only the API SDK; UI components are optional.
+
+For the CLI:
+
+```sh
+pnpm add -D @rebyteai/cli@0.2.0
+pnpm exec rebyte --help
+```
+
+Packages are published on npm. [GitHub Releases](https://github.com/ReByteAI/rebyte-agent-toolkit/releases/tag/v0.2.0)
+provide release notes and matching archives with SHA-256 checksums.
+
+## Run or modify the examples
+
+Clone the repository only when you want the complete example applications or to
+contribute source changes.
 
 Node.js 22+, pnpm 10:
 
@@ -20,7 +69,7 @@ pnpm build
 
 | Example | What you learn |
 | --- | --- |
-| [Official SDK recipes](examples/agents-api/README.md) | Create an Agent and Session; no-Sandbox chat; client functions; files and Artifacts; cleanup |
+| [Rebyte SDK recipes](examples/agents-api/README.md) | Create an Agent and Session; no-Sandbox chat; client functions; files and Artifacts; cleanup |
 | [Node App Kit](examples/react-chat/README.md) | Streaming React chat, upload, downloads, cancellation, reload and Session isolation |
 | [Cloudflare App Kit](examples/cloudflare-app-kit/README.md) | The same server adapter and UI on a Worker |
 | [Commerce](https://github.com/ReByteAI/commerce-agent-starter/tree/main/rebyte) | Python host executes catalog/cart/presentation functions and installs per-Session Skills |
@@ -58,9 +107,9 @@ per Session, even when two Sessions use the same saved Agent.
 ## React and server packages
 
 ```tsx
-import { createAgentSessionTransport, useAgentSession } from '@rebyte/agent-react'
-import { AgentChatView } from '@rebyte/agent-ui'
-import '@rebyte/agent-ui/styles.css'
+import { createAgentSessionTransport, useAgentSession } from '@rebyteai/agent-react'
+import { AgentChatView } from '@rebyteai/agent-ui'
+import '@rebyteai/agent-ui/styles.css'
 
 // Create once outside the component so subscriptions survive renders.
 const transport = createAgentSessionTransport({ url: '/api/sessions' })
@@ -70,19 +119,19 @@ export function Chat() {
 }
 ```
 
-`@rebyte/agent-server` supplies the shared Hono example proxy. The browser never
+`@rebyteai/agent-server` supplies the shared Hono example proxy. The browser never
 receives the organization key. Authenticate users and enforce ownership of every
 Session on your server before public deployment: the example's fixed Agent check
 is not per-user authorization. See [architecture](docs/architecture.md).
 
 The React hook handles server tools and displays native events. It does not
-implement application-specific client functions; use the official SDK recipe or
+implement application-specific client functions; use the Rebyte SDK recipe or
 Commerce adapter for that host loop. [Package API](packages/react/README.md).
 
 ## Validate changes
 
 ```sh
-pnpm test             # CLI validation and HTTP protocol fixture
+pnpm test             # SDK public exports/defaults and CLI protocol smoke checks
 pnpm typecheck
 pnpm build
 APP_KIT_URL=http://127.0.0.1:4101 pnpm --filter @rebyte/example-react-chat test:live
@@ -93,6 +142,6 @@ Live tests use real models and compute, so the selected organization needs credi
 delete them after checking results. App Kit's live test checks the configured
 saved Agent through the actual application proxy and deletes only its test Sessions.
 
-This checkout uses Agents API exclusively. Published archives may precede these
-changes; build from this source until an Agents-compatible release is published.
+Release **v0.2.0** uses Agents API exclusively. Releases before v0.2.0 predate
+this API migration.
 The removed Responses hooks and old manifests require [migration](docs/migration.md).

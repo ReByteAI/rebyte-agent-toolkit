@@ -1,7 +1,7 @@
 # Cloudflare App Kit
 
 The Worker and [Node App Kit](../react-chat/README.md) mount the same
-`@rebyte/agent-server`. Both use `useAgentSession`, native Agents events, Session
+`@rebyteai/agent-server`. Both use `useAgentSession`, native Agents events, Session
 files and immutable Artifacts. The lifecycle and feature limits are identical.
 
 ## Local development
@@ -10,7 +10,8 @@ files and immutable Artifacts. The lifecycle and feature limits are identical.
 pnpm --dir ../.. install
 pnpm --dir ../.. build
 cp .dev.vars.example .dev.vars
-# Set REBYTE_API_KEY, REBYTE_AGENT_ID and REBYTE_API_URL in .dev.vars.
+# Set REBYTE_API_KEY and REBYTE_AGENT_ID in .dev.vars.
+# REBYTE_API_URL is optional and only needed for a custom/local endpoint.
 pnpm dev
 ```
 

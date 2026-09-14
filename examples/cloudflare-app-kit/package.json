@@ -10,13 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@rebyte/agent-react": "workspace:*",
-    "@rebyte/agent-ui": "workspace:*",
+    "@rebyteai/agent-react": "workspace:*",
+    "@rebyteai/agent-ui": "workspace:*",
     "hono": "^4.9.9",
-    "openai": "7.15.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@rebyte/agent-server": "workspace:*"
+    "@rebyteai/agent-server": "workspace:*",
+    "@rebyteai/agent-sdk": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260830.1",

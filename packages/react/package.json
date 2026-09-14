@@ -1,5 +1,5 @@
 {
-  "name": "@rebyte/agent-react",
+  "name": "@rebyteai/agent-react",
   "version": "0.2.0",
   "description": "Headless React hooks and transports for Rebyte Agents",
   "license": "MIT",
@@ -34,7 +34,8 @@
     "typecheck": "tsc --noEmit"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "peerDependencies": {
     "react": ">=18.2.0"
@@ -42,9 +43,10 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "react": "^19.2.0",
-    "tsup": "^8.5.0"
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "openai": "7.15.0"
+    "@rebyteai/agent-sdk": "workspace:*"
   }
 }

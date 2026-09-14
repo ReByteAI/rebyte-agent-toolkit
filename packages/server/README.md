@@ -1,11 +1,18 @@
-# @rebyte/agent-server
+# @rebyteai/agent-server
+
+Install the versioned package (no repository clone required):
+
+```sh
+pnpm add @rebyteai/agent-server@0.2.0
+```
+
 
 A shared Hono application proxy for the Node and Cloudflare App Kit examples.
 
 ```ts
-import { createAgentApp } from '@rebyte/agent-server'
+import { createAgentApp } from '@rebyteai/agent-server'
 const app = createAgentApp({ apiKey: process.env.REBYTE_API_KEY!,
-  agentId: process.env.REBYTE_AGENT_ID!, baseURL: 'https://api.rebyte.ai/v1' })
+  agentId: process.env.REBYTE_AGENT_ID! })
 ```
 
 `/api/sessions` creates hosted Sessions for the configured saved Agent. Routes

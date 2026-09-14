@@ -7,19 +7,26 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
         with:
           version: 10.27.0
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
+      - name: Set up npm with trusted publishing support
+        run: pnpm add --global npm@11.19.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
@@ -27,12 +34,20 @@ jobs:
       - name: Verify tag matches every package version
         run: |
           version="${GITHUB_REF_NAME#v}"
-          for package in server react ui cli; do
+          test "$(node -p "require('./package.json').version")" = "$version"
+          for package in sdk server react ui cli; do
             test "$(node -p "require('./packages/$package/package.json').version")" = "$version"
           done
       - name: Build release archives
         run: pnpm pack:release "$GITHUB_WORKSPACE/release"
+      - name: Publish npm packages through OIDC
+        run: node scripts/publish-release.mjs "$GITHUB_WORKSPACE/release"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/* --verify-tag --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release already exists; preserving its assets."
+          else
+            gh release create "$GITHUB_REF_NAME" release/* --verify-tag --generate-notes
+          fi

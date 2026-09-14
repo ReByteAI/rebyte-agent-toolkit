@@ -1,0 +1,44 @@
+{
+  "name": "tsc-multi",
+  "version": "1.1.11",
+  "description": "Compile multiple TypeScript projects into multiple targets.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "tsc-multi": "bin/tsc-multi.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tommy351/tsc-multi.git"
+  },
+  "keywords": [
+    "typescript",
+    "tsc",
+    "ts",
+    "compiler"
+  ],
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "author": "Tommy Chen <tommy351@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tommy351/tsc-multi/issues"
+  },
+  "homepage": "https://github.com/tommy351/tsc-multi#readme",
+  "engines": {
+    "node": ">=14"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.2",
+    "p-all": "^3.0.0",
+    "signal-exit": "^4.1.0",
+    "superstruct": "^1.0.4",
+    "tslib": "^2.8.1",
+    "yargs": "^17.7.2"
+  },
+  "peerDependencies": {
+    "typescript": ">=4.3.0"
+  }
+}

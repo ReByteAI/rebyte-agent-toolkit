@@ -1,14 +1,20 @@
-# @rebyte/cli
+# @rebyteai/cli
 
-Manage saved Agents through the official OpenAI Agents API SDK. Build this checkout
-with `pnpm --filter @rebyte/cli build`; the executable is `dist/cli.js`.
+Manage saved Agents through the Rebyte Agent SDK fork. Install the release in your project:
+
+```sh
+pnpm add -D @rebyteai/cli@0.2.0
+```
+
+No repository clone is required. The historical `ReByteAI/rebyte-cli` repository
+is archived; this package is the current CLI.
 
 ```sh
 export REBYTE_API_KEY='rbk_...'
-node dist/cli.js agent validate -f /path/to/agent.toml
-node dist/cli.js agent create -f /path/to/agent.toml
-node dist/cli.js agent apply agent_... -f /path/to/agent.toml
-node dist/cli.js agent export agent_... -o /path/to/export.toml
+pnpm exec rebyte agent validate -f /path/to/agent.toml
+pnpm exec rebyte agent create -f /path/to/agent.toml
+pnpm exec rebyte agent apply agent_... -f /path/to/agent.toml
+pnpm exec rebyte agent export agent_... -o /path/to/export.toml
 ```
 
 `--env dev` uses `http://127.0.0.1:34567`; production defaults to
@@ -52,7 +58,7 @@ an absolute `cwd`. Skills, packages, files and network policy belong to the Sess
 previous settings. It does not modify existing Sessions. Export preserves native
 MCP definitions, omits redacted/null optional fields and removes stdio's derived
 connection origin. Literal JSON null in schemas or request metadata cannot be
-represented in TOML; export fails without writing. Use the official SDK for JSON.
+represented in TOML; export fails without writing. Use the Rebyte SDK for JSON.
 
 See [migration](../../docs/migration.md) for retired manifest fields. The Commerce
 repository has its own local business manifest and Python converter; that file is

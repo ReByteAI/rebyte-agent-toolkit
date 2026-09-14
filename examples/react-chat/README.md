@@ -1,6 +1,6 @@
 # Node App Kit
 
-A React chat app backed by `@rebyte/agent-server` and the official OpenAI SDK
+A React chat app backed by `@rebyteai/agent-server` and the Rebyte Agent SDK
 7.15.0. One saved Agent serves many independent Sessions.
 
 ```sh
@@ -55,7 +55,7 @@ APP_KIT_URL=http://127.0.0.1:4101 pnpm test:live
 This checks two newly created Sessions, SSE, upload, exact Artifact download,
 follow-up file persistence, cross-Session file isolation and cross-Session Artifact
 404, then deletes its test Sessions. The configured saved Agent is preserved.
-Run the [official SDK recipes](../agents-api/README.md) to additionally cover Agent
+Run the [Rebyte SDK recipes](../agents-api/README.md) to additionally cover Agent
 creation and client-function continuation from a clean fixture.
 
 Before serving untrusted users, add login and server-side user-to-Session ownership

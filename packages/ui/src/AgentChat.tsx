@@ -7,7 +7,7 @@ import {
   type AgentChatMessage,
   type AgentSessionTransport,
   type AgentSessionChat,
-} from '@rebyte/agent-react'
+} from '@rebyteai/agent-react'
 
 export interface AgentChatProps {
   transport: AgentSessionTransport

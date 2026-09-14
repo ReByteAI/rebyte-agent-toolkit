@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
-import { createAgentSessionTransport, useAgentSession } from '@rebyte/agent-react'
-import { AgentChatView } from '@rebyte/agent-ui'
+import { createAgentSessionTransport, useAgentSession } from '@rebyteai/agent-react'
+import { AgentChatView } from '@rebyteai/agent-ui'
 
 export function App() {
   const transport = useMemo(() => createAgentSessionTransport({ url: '/api/sessions' }), [])

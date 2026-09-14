@@ -1,12 +1,12 @@
-import OpenAI from 'openai'
-import type { Agent, AgentCreateParams } from 'openai/resources/beta/agents/agents'
+import Rebyte from '@rebyteai/agent-sdk'
+import type { Agent, AgentCreateParams } from '@rebyteai/agent-sdk/resources/beta/agents/agents'
 
-/** Agent management uses the same official SDK as the application examples. */
+/** Agent management uses the Rebyte SDK fork as the application examples. */
 export class RebyteApiClient {
-  private readonly client: OpenAI
+  private readonly client: Rebyte
   constructor(baseUrl: string, apiKey: string) {
     const base = baseUrl.replace(/\/+$/, '')
-    this.client = new OpenAI({ apiKey, baseURL: base.endsWith('/v1') ? base : `${base}/v1`, maxRetries: 0 })
+    this.client = new Rebyte({ apiKey, baseURL: base.endsWith('/v1') ? base : `${base}/v1`, maxRetries: 0 })
   }
   createAgent(payload: AgentCreateParams): Promise<Agent> {
     return this.client.beta.agents.create(payload)

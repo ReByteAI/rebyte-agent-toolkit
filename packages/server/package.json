@@ -1,5 +1,5 @@
 {
-  "name": "@rebyte/agent-server",
+  "name": "@rebyteai/agent-server",
   "version": "0.2.0",
   "type": "module",
   "license": "MIT",
@@ -21,9 +21,19 @@
   },
   "dependencies": {
     "hono": "^4.9.9",
-    "openai": "7.15.0"
+    "@rebyteai/agent-sdk": "workspace:*"
   },
   "devDependencies": {
-    "tsup": "^8.5.0"
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ReByteAI/rebyte-agent-toolkit.git",
+    "directory": "packages/server"
   }
 }

@@ -1,10 +1,17 @@
-# @rebyte/agent-react
+# @rebyteai/agent-react
+
+Install the versioned package (no repository clone required):
+
+```sh
+pnpm add @rebyteai/agent-react@0.2.0
+```
+
 
 Headless React state for native Agents API Sessions. The browser calls your
 same-origin application server, never the organization API directly.
 
 ```tsx
-import { createAgentSessionTransport, useAgentSession } from '@rebyte/agent-react'
+import { createAgentSessionTransport, useAgentSession } from '@rebyteai/agent-react'
 const transport = createAgentSessionTransport({ url: '/api/sessions' })
 // Inside a React component:
 const chat = useAgentSession({ transport, initialSessionId, onSession })
@@ -26,7 +33,7 @@ History is restored from persisted Items and Turns. A recovered active Session i
 polled until settled. Live disconnects report an error; reload recovers output
 without resending input. The hook reports client-tool waiting as an error and does
 not run application handlers or submit their outputs. For those workflows, use
-the [official SDK recipe](../../examples/agents-api/README.md) or Commerce adapter.
+the [Rebyte SDK recipe](../../examples/agents-api/README.md) or Commerce adapter.
 
 Images are uploaded as Session files. The model can use hosted `view_image` to
 inspect them; the upload itself is not an inline model image message. No browser

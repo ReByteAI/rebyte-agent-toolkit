@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App.js'
-import '@rebyte/agent-ui/styles.css'
+import '@rebyteai/agent-ui/styles.css'
 import './page.css'
 
 const root = document.getElementById('root')
