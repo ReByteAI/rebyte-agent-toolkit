@@ -1,21 +1,20 @@
 # @rebyte/agent-ui
 
-Optional React chat UI for Rebyte Agents.
+Optional React chat components for native Agents API Sessions.
 
-```sh
-pnpm add \
-  https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-agent-react.tgz \
-  https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-agent-ui.tgz
+```tsx
+import { AgentChat } from '@rebyte/agent-ui'
+import '@rebyte/agent-ui/styles.css'
+import { createAgentSessionTransport } from '@rebyte/agent-react'
+const transport = createAgentSessionTransport({ url: '/api/sessions' })
+// Inside your application:
+<AgentChat transport={transport} initialSessionId={savedSessionId} />
 ```
 
-Import `@rebyte/agent-ui/styles.css`, then render `AgentChat` with an
-`AgentTransport`. Use `AgentChatView` when your application owns the headless
-state. When the transport defines `upload`, the composer shows its attachment
-button, upload progress, removal controls, and sent-file summaries.
+Use `AgentChatView` with `useAgentSession` when your application owns state and
+Session-ID persistence. The UI renders text and tools in Item output order, upload
+progress, Session Artifact downloads, cancellation and a native event inspector.
+It does not implement application-specific function handlers.
 
-Texts and tools render in Responses output order, including pre-tool
-commentary and the final answer. Client functions display “Awaiting client
-output”; this UI does not provide or automatically execute their application
-implementations. The inspector exposes received SSE events.
-
-See the [repository README](../../README.md#optional-ui) for usage.
+See the [Node App Kit](../../examples/react-chat/README.md) for the complete server
+and browser setup. The organization key stays on the application server.

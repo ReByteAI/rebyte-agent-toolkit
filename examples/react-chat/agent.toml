@@ -1,10 +1,4 @@
-name = "toolkit-example-agent"
-description = "Agent used by the Rebyte Agent Toolkit example"
-llm = "gpt-5.4-mini"
-max_steps = 8
-prompt_file = "prompt.md"
-
-capabilities = [
-  "sandbox",
-  "skills"
-]
+name = "react-chat"
+model = "gpt-5.6-luna"
+instructions_file = "prompt.md"
+tools = []

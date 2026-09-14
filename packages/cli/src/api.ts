@@ -1,75 +1,20 @@
-import type { RebyteAgentRecord } from './manifest.js'
+import OpenAI from 'openai'
+import type { Agent, AgentCreateParams } from 'openai/resources/beta/agents/agents'
 
-interface ApiErrorBody {
-  error?: { message?: string; code?: string } | string
-}
-
+/** Agent management uses the same official SDK as the application examples. */
 export class RebyteApiClient {
-  private readonly baseUrl: string
-
-  constructor(
-    baseUrl: string,
-    private readonly apiKey: string,
-    private readonly fetcher: typeof fetch = fetch,
-  ) {
-    this.baseUrl = baseUrl.replace(/\/+$/, '')
+  private readonly client: OpenAI
+  constructor(baseUrl: string, apiKey: string) {
+    const base = baseUrl.replace(/\/+$/, '')
+    this.client = new OpenAI({ apiKey, baseURL: base.endsWith('/v1') ? base : `${base}/v1`, maxRetries: 0 })
   }
-
-  async createAgent(payload: Record<string, unknown>): Promise<RebyteAgentRecord> {
-    const body = await this.request('/v1/agents', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
-    return requireAgent(body)
+  createAgent(payload: AgentCreateParams): Promise<Agent> {
+    return this.client.beta.agents.create(payload)
   }
-
-  async updateAgent(
-    id: string,
-    payload: Record<string, unknown>,
-  ): Promise<RebyteAgentRecord> {
-    const body = await this.request(`/v1/agents/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      body: JSON.stringify(payload),
-    })
-    return requireAgent(body)
+  updateAgent(id: string, payload: AgentCreateParams): Promise<Agent> {
+    return this.client.beta.agents.update(id, payload)
   }
-
-  async getAgent(id: string): Promise<RebyteAgentRecord> {
-    const body = await this.request(`/v1/agents/${encodeURIComponent(id)}`)
-    return requireAgent(body)
+  getAgent(id: string): Promise<Agent> {
+    return this.client.beta.agents.retrieve(id)
   }
-
-  private async request(path: string, init: RequestInit = {}): Promise<unknown> {
-    const response = await this.fetcher(`${this.baseUrl}${path}`, {
-      ...init,
-      headers: {
-        API_KEY: this.apiKey,
-        Accept: 'application/json',
-        ...(init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        ...init.headers,
-      },
-    })
-    const body = await response.json() as ApiErrorBody
-    if (!response.ok) {
-      const apiError = body.error
-      const message = typeof apiError === 'string' ? apiError : apiError?.message
-      throw new Error(message || `Rebyte API request failed with HTTP ${response.status}`)
-    }
-    return body
-  }
-}
-
-function requireAgent(body: unknown): RebyteAgentRecord {
-  if (typeof body !== 'object' || body === null || !('agent' in body)) {
-    throw new Error('Rebyte API response did not include an agent')
-  }
-  const agent = (body as { agent?: unknown }).agent
-  if (
-    typeof agent !== 'object'
-    || agent === null
-    || typeof (agent as { id?: unknown }).id !== 'string'
-  ) {
-    throw new Error('Rebyte API returned an invalid agent')
-  }
-  return agent as RebyteAgentRecord
 }

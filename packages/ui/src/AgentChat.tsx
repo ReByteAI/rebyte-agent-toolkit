@@ -2,15 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
-  useRebyteChat,
+  useAgentSession,
   type AgentAttachment,
   type AgentChatMessage,
-  type AgentTransport,
-  type RebyteChat,
+  type AgentSessionTransport,
+  type AgentSessionChat,
 } from '@rebyte/agent-react'
 
 export interface AgentChatProps {
-  transport: AgentTransport
+  transport: AgentSessionTransport
   brand?: string
   agentName?: string
   apiLabel?: string
@@ -18,11 +18,12 @@ export interface AgentChatProps {
   welcomeDescription?: string
   inspector?: boolean
   className?: string
-  initialConversationId?: string
+  initialSessionId?: string
+  continuityLabel?: string
 }
 
-export interface AgentChatViewProps extends Omit<AgentChatProps, 'transport' | 'initialConversationId'> {
-  chat: RebyteChat
+export interface AgentChatViewProps extends Omit<AgentChatProps, 'transport' | 'initialSessionId'> {
+  chat: AgentSessionChat
 }
 
 const SendIcon = () => (
@@ -69,10 +70,10 @@ function assistantMessages(messages: AgentChatMessage[]): AgentChatMessage[] {
   return messages.filter((message) => message.role === 'assistant')
 }
 
-export function AgentChat({ transport, initialConversationId, ...props }: AgentChatProps) {
-  const chat = useRebyteChat({
+export function AgentChat({ transport, initialSessionId, ...props }: AgentChatProps) {
+  const chat = useAgentSession({
     transport,
-    ...(initialConversationId ? { initialConversationId } : {}),
+    ...(initialSessionId ? { initialSessionId } : {}),
   })
   return <AgentChatView chat={chat} {...props} />
 }
@@ -81,11 +82,12 @@ export function AgentChatView({
   chat,
   brand = 'Rebyte Agent',
   agentName = 'Configured Agent',
-  apiLabel = 'Responses API',
+  apiLabel = 'Agents API',
   welcomeTitle = 'Talk to your Agent.',
   welcomeDescription = 'Messages, tool execution, and streamed output share one event timeline.',
   inspector = true,
   className = '',
+  continuityLabel = 'Session',
 }: AgentChatViewProps) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [mobilePane, setMobilePane] = useState<'chat' | 'inspector'>('chat')
@@ -174,7 +176,7 @@ export function AgentChatView({
           <span className="rb-brand">{brand}</span>
           <span className="rb-product-tag">UI</span>
         </div>
-        <button className="rb-new" onClick={newConversation}>
+        <button className="rb-new" onClick={newConversation} disabled={running || uploading}>
           <span aria-hidden="true">＋</span> New conversation
         </button>
         <div className="rb-sidebar-label">Runtime</div>
@@ -187,7 +189,7 @@ export function AgentChatView({
         </div>
         <div className="rb-sidebar-spacer" />
         <div className="rb-sidebar-foot">
-          <span>{chat.conversationId ? `…${chat.conversationId.slice(-10)}` : 'New conversation'}</span>
+          <span>{chat.sessionId ? `…${chat.sessionId.slice(-10)}` : 'New conversation'}</span>
           <button onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')} aria-label="Toggle color theme">
             {theme === 'light' ? '◐' : '◑'}
           </button>
@@ -211,6 +213,11 @@ export function AgentChatView({
           ) : chat.messages.map((message) => (
             <Message key={message.id} message={message} />
           ))}
+          {'artifacts' in chat && chat.artifacts.length > 0 && (
+            <div className="rb-message-files" aria-label="Session artifacts">
+              {chat.artifacts.map(artifact => <a key={artifact.id} href={artifact.url} download>{artifact.path.split('/').at(-1)} · {formatBytes(artifact.size_bytes)}</a>)}
+            </div>
+          )}
           {running && <div className="rb-running"><i /> Agent is running</div>}
           <div ref={end} />
         </div>
@@ -219,7 +226,7 @@ export function AgentChatView({
             <div className="rb-error" role="alert">{fileError ? fileError : chat.error?.message}</div>
           )}
           <div className="rb-composer">
-            {chat.upload && (
+            {(
               <>
                 <input
                   ref={fileInput}
@@ -314,7 +321,7 @@ export function AgentChatView({
 
       {inspector && (
         <aside className={`rb-inspector-pane ${mobilePane === 'inspector' ? 'is-mobile-visible' : ''}`}>
-          <Inspector messages={assistant} apiLabel={apiLabel} agentName={agentName} />
+          <Inspector messages={assistant} apiLabel={apiLabel} agentName={agentName} continuityLabel={continuityLabel} />
         </aside>
       )}
     </div>
@@ -340,9 +347,9 @@ function Message({ message }: { message: AgentChatMessage }) {
       </div>
     )
   }
-  const parts = message.response === null ? [] : [
-    ...message.response.toolCalls.map(tool => ({ kind: 'tool' as const, outputIndex: tool.outputIndex, tool })),
-    ...message.response.textMessages.map(text => ({ kind: 'text' as const, outputIndex: text.outputIndex, text })),
+  const parts = message.projection === null ? [] : [
+    ...message.projection.toolCalls.map(tool => ({ kind: 'tool' as const, outputIndex: tool.outputIndex, tool })),
+    ...message.projection.textMessages.map(text => ({ kind: 'text' as const, outputIndex: text.outputIndex, text })),
   ].sort((a, b) => a.outputIndex - b.outputIndex)
   return (
     <div className={`rb-assistant-turn is-${message.status}`}>
@@ -368,10 +375,11 @@ function Message({ message }: { message: AgentChatMessage }) {
   )
 }
 
-function Inspector({ messages, apiLabel, agentName }: {
+function Inspector({ messages, apiLabel, agentName, continuityLabel }: {
   messages: AgentChatMessage[]
   apiLabel: string
   agentName: string
+  continuityLabel: string
 }) {
   return (
     <div className="rb-inspector">
@@ -381,13 +389,13 @@ function Inspector({ messages, apiLabel, agentName }: {
       </div>
       <dl className="rb-runtime-grid">
         <div><dt>Agent</dt><dd>{agentName}</dd></div>
-        <div><dt>Continuity</dt><dd>conversation</dd></div>
+        <div><dt>Continuity</dt><dd>{continuityLabel}</dd></div>
         <div><dt>Transport</dt><dd>Server-sent events</dd></div>
       </dl>
       {messages.length === 0 ? (
         <div className="rb-inspector-empty">
           <span>{'{ }'}</span>
-          <p>Send a message to inspect the raw Responses event stream.</p>
+          <p>Send a message to inspect the raw {apiLabel} event stream.</p>
         </div>
       ) : (
         <div className="rb-turns">
@@ -396,12 +404,12 @@ function Inspector({ messages, apiLabel, agentName }: {
               <header>
                 <span>turn {index + 1}</span>
                 <strong className={`is-${message.status}`}>{message.status}</strong>
-                <small>{message.response?.events.length ?? 0} events</small>
+                <small>{message.projection?.events.length ?? 0} events</small>
               </header>
               <div className="rb-event-list">
-                {(message.response?.events ?? []).map((event) => (
-                  <details key={`${event.sequence_number}-${event.type}`}>
-                    <summary><span>#{event.sequence_number}</span><strong>{event.type}</strong></summary>
+                {(message.projection?.events ?? []).map((event) => (
+                  <details key={event.event_id}>
+                    <summary><span>{event.event_id.slice(-8)}</span><strong>{event.type}</strong></summary>
                     <pre>{JSON.stringify(event, null, 2)}</pre>
                   </details>
                 ))}

@@ -5,297 +5,52 @@ import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)))
 const cliPath = join(packageDir, 'dist', 'cli.js')
 const fixtureDir = mkdtempSync(join(tmpdir(), 'rebyte-agent-cli-'))
-const agentId = 'c05ff691-8e23-4c3c-9d77-29d5783387e5'
-const resolvedMcpServerId = '6cc3cf22-d268-4f21-b34b-3e6dc48bab96'
-let agent = null
-let createPayload = null
-let requestCount = 0
-
+const agentId = 'agent_cli_fixture'
+let agent
+const methods = []
 const server = createServer(async (request, response) => {
-  requestCount += 1
-  assert.equal(request.headers.api_key, 'local_test_key')
+  assert.equal(request.headers.authorization, 'Bearer local_test_key')
+  assert.equal(request.headers['openai-beta'], 'agents=v1')
+  methods.push(request.method)
   const body = await readJsonBody(request)
-  if (request.method === 'POST' && request.url === '/v1/agents') {
-    createPayload = body
-    agent = {
-      id: agentId,
-      object: 'agent',
-      ...body,
-      mcpServers: body.mcpServers.map((server) => server.type === 'url'
-        ? { kind: 'custom', serverId: resolvedMcpServerId, name: server.name }
-        : server),
-    }
-    return sendJson(response, 201, { agent })
-  }
-  if (request.method === 'PATCH' && request.url === `/v1/agents/${agentId}`) {
-    assert.ok(agent)
-    agent = { ...agent, ...body, id: agentId, object: 'agent' }
-    return sendJson(response, 200, { agent })
-  }
-  if (request.method === 'GET' && request.url === `/v1/agents/${agentId}`) {
-    assert.ok(agent)
-    return sendJson(response, 200, { agent })
-  }
-  return sendJson(response, 404, { error: { message: 'not found' } })
+  if (request.method === 'POST') agent = { id: agentId, object: 'agent', ...body }
+  return sendJson(response, 200, agent)
 })
-
 try {
-  process.env.REBYTE_SMOKE_MCP_URL = 'https://mcp.example.com/storefront/mcp'
-  delete process.env.REBYTE_SMOKE_MISSING_MCP_URL
-  writeFileSync(join(fixtureDir, 'prompt.md'), 'Research carefully.\n', 'utf8')
-  writeFileSync(join(fixtureDir, 'agent.toml'), `
-name = "Research Agent"
-description = "Research with citations"
-llm = "deepseek-v4-pro"
-max_steps = 24
-prompt_file = "prompt.md"
-capabilities = [
-  "web_search_&_browse",
-  "composio:github",
-  "custom:550e8400-e29b-41d4-a716-446655440000"
-]
-
-[[mcp_servers]]
-type = "url"
-name = "storefront"
-url = "\${REBYTE_SMOKE_MCP_URL}"
-
-[[mcp_servers]]
-type = "custom"
-name = "inventory"
-server_id = "9ba16a85-a580-4822-aa52-d937803f86c9"
-
-[[skills]]
-repo = "rebyteai/skills"
-path = "research/deep-research"
-
-[[client_tools]]
-type = "function"
-name = "present_research"
-description = "Render the research result in the host application."
-strict = true
-
-[client_tools.parameters]
-type = "object"
-"$schema" = "http://json-schema.org/draft-07/schema#"
-required = ["title", "sources"]
-additionalProperties = false
-
-[client_tools.parameters.properties.title]
-type = ["string", "null"]
-minLength = 1
-
-[client_tools.parameters.properties.sources]
-type = "array"
-minItems = 1
-maxItems = 20
-items = { type = "string" }
-
-[network_policy]
-allow_network_egress = true
-domain_allowlist = "none"
-additional_allowed_domains = ["api.example.com"]
-allow_public_traffic = false
-`, 'utf8')
-
   await listen(server)
-  const address = server.address()
-  assert.ok(address && typeof address === 'object')
-  process.env.REBYTE_TEST_BASE_URL = `http://127.0.0.1:${address.port}`
-  const common = ['--env', 'test', '--api-key', 'local_test_key']
-
-  const validated = await runCli([
-    'agent', 'validate', '-f', join(fixtureDir, 'agent.toml'),
-  ])
-  assert.match(validated.stdout, /Valid agent\.toml: Research Agent/)
-
-  const created = await runCli([
-    'agent', 'create', '-f', join(fixtureDir, 'agent.toml'), ...common,
-  ])
-  assert.match(created.stdout, new RegExp(`Created Agent ${agentId}`))
-  assert.ok(createPayload)
-  assert.equal(agent.instructions, 'Research carefully.\n')
-  assert.deepEqual(createPayload.mcpServers.slice(2), [
-    { kind: 'custom', serverId: '550e8400-e29b-41d4-a716-446655440000' },
-    {
-      type: 'url',
-      name: 'storefront',
-      url: 'https://mcp.example.com/storefront/mcp',
-    },
-    {
-      kind: 'custom',
-      serverId: '9ba16a85-a580-4822-aa52-d937803f86c9',
-      name: 'inventory',
-    },
-  ])
-  assert.equal(agent.mcpServers[1].kind, 'composio')
-  assert.deepEqual(agent.mcpServers[3], {
-    kind: 'custom',
-    serverId: resolvedMcpServerId,
-    name: 'storefront',
-  })
-  assert.deepEqual(agent.clientTools, [{
-    type: 'function',
-    name: 'present_research',
-    description: 'Render the research result in the host application.',
-    parameters: {
-      type: 'object',
-      $schema: 'http://json-schema.org/draft-07/schema#',
-      required: ['title', 'sources'],
-      additionalProperties: false,
-      properties: {
-        title: { type: ['string', 'null'], minLength: 1 },
-        sources: {
-          type: 'array',
-          minItems: 1,
-          maxItems: 20,
-          items: { type: 'string' },
-        },
-      },
-    },
-    strict: true,
-  }])
-  assert.deepEqual(agent.networkPolicy, {
-    allow_network_egress: true,
-    domain_allowlist: 'none',
-    additional_allowed_domains: ['api.example.com'],
-    allow_public_traffic: false,
-  })
-
-  const exportPath = join(fixtureDir, 'exported.toml')
-  const exported = await runCli([
-    'agent', 'export', agentId, '-o', exportPath, ...common,
-  ])
-  assert.match(exported.stdout, /Exported Agent/)
-  const exportedText = readFileSync(exportPath, 'utf8')
-  assert.match(exportedText, /composio:github/)
-  assert.match(exportedText, /\[\[mcp_servers\]\]/)
-  assert.match(exportedText, /type = "custom"/)
-  assert.match(exportedText, new RegExp(`server_id = "${resolvedMcpServerId}"`))
-  assert.doesNotMatch(exportedText, /mcp\.example\.com/)
-  assert.match(exportedText, /\[\[skills\]\]/)
-  assert.match(exportedText, /\[\[client_tools\]\]/)
-  assert.match(exportedText, /\[client_tools\.parameters\.properties\.title\]/)
-  assert.match(exportedText, /\[network_policy\]/)
-  await runCli(['agent', 'validate', '-f', exportPath])
-
-  writeFileSync(join(fixtureDir, 'missing-env.toml'), `
-name = "Missing MCP environment"
-capabilities = []
-
-[[mcp_servers]]
-type = "url"
-name = "storefront"
-url = "\${REBYTE_SMOKE_MISSING_MCP_URL}"
-`, 'utf8')
-  const missingEnvironment = await runCli([
-    'agent', 'validate', '-f', join(fixtureDir, 'missing-env.toml'),
-  ], false)
-  assert.match(
-    missingEnvironment.stderr,
-    /references unset or empty environment variable REBYTE_SMOKE_MISSING_MCP_URL/,
-  )
-
-  const refusedOverwrite = await runCli([
-    'agent', 'export', agentId, '-o', exportPath, ...common,
-  ], false)
-  assert.match(refusedOverwrite.stderr, /already exists/)
-
-  agent.clientTools[0].parameters.properties.title.enum = ['brief', null]
-  const refusedNullExport = await runCli([
-    'agent', 'export', agentId, ...common,
-  ], false)
-  assert.match(
-    refusedNullExport.stderr,
-    /clientTools\[0\]\.parameters\.properties\.title\.enum\[1\] contains literal JSON null/,
-  )
-  delete agent.clientTools[0].parameters.properties.title.enum
-
-  writeFileSync(join(fixtureDir, 'apply.toml'), `
-name = "Updated Research Agent"
-llm = "glm-5.3"
-max_steps = 32
-prompt = "Updated prompt"
-capabilities = ["sandbox", "skills"]
-`, 'utf8')
-  const applied = await runCli([
-    'agent', 'apply', agentId, '-f', join(fixtureDir, 'apply.toml'), ...common,
-  ])
-  assert.match(applied.stdout, /Applied agent\.toml/)
-  assert.equal(agent.name, 'Updated Research Agent')
-  assert.equal(agent.description, null)
-  assert.equal(agent.instructions, 'Updated prompt')
-  assert.deepEqual(agent.clientTools, [])
-  assert.equal(agent.networkPolicy, null)
-
-  writeFileSync(join(fixtureDir, 'unknown.toml'), 'name = "Bad"\ntype = "codex"\n', 'utf8')
-  const unknown = await runCli([
-    'agent', 'validate', '-f', join(fixtureDir, 'unknown.toml'),
-  ], false)
-  assert.match(unknown.stderr, /Unrecognized key.*type/)
-
-  writeFileSync(join(fixtureDir, 'unsupported-schema.toml'), `
-name = "Bad schema"
-
-[[client_tools]]
-type = "function"
-name = "search"
-description = "Search locally."
-strict = true
-
-[client_tools.parameters]
-type = "object"
-required = ["query"]
-additionalProperties = false
-
-[client_tools.parameters.properties.query]
-type = "string"
-default = "all"
-`, 'utf8')
-  const unsupportedSchema = await runCli([
-    'agent', 'validate', '-f', join(fixtureDir, 'unsupported-schema.toml'),
-  ], false)
-  assert.match(
-    unsupportedSchema.stderr,
-    /unsupported strict JSON Schema keyword: default/,
-  )
-
-  writeFileSync(join(fixtureDir, 'optional-field.toml'), `
-name = "Bad required fields"
-
-[[client_tools]]
-type = "function"
-name = "search"
-description = "Search locally."
-strict = true
-
-[client_tools.parameters]
-type = "object"
-required = []
-additionalProperties = false
-
-[client_tools.parameters.properties.query]
-type = "string"
-`, 'utf8')
-  const optionalField = await runCli([
-    'agent', 'validate', '-f', join(fixtureDir, 'optional-field.toml'),
-  ], false)
-  assert.match(
-    optionalField.stderr,
-    /required: must contain every property name exactly once/,
-  )
-
-  assert.equal(requestCount, 4)
-  process.stdout.write('agent.toml CLI smoke passed\n')
+  const common = ['--base-url', `http://127.0.0.1:${server.address().port}/v1`, '--api-key', 'local_test_key']
+  const file = join(fixtureDir, 'agent.toml')
+  writeFileSync(join(fixtureDir, 'prompt.md'), 'Keep literal ${EXAMPLE}.')
+  writeFileSync(file, 'model = "gpt-5.6-luna"\nname = "Example"\ninstructions_file = "prompt.md"\ntools = []\n[text.format]\ntype = "json_schema"\nschema = { type = "object", properties = { answer = { type = "string" } } }\n')
+  await runCli(['agent', 'validate', '-f', file])
+  await runCli(['agent', 'create', '-f', file, ...common])
+  assert.equal(agent.instructions, 'Keep literal ${EXAMPLE}.')
+  assert.equal(agent.model, 'gpt-5.6-luna')
+  const output = join(fixtureDir, 'export.toml')
+  await runCli(['agent', 'export', agentId, '-o', output, ...common])
+  await runCli(['agent', 'validate', '-f', output])
+  assert.match(readFileSync(output, 'utf8'), /json_schema/)
+  assert.match((await runCli(['agent', 'export', agentId, '-o', output, ...common], false)).stderr, /already exists/)
+  agent.text.format.schema.properties.answer.enum = ['yes', null]
+  assert.match((await runCli(['agent', 'export', agentId, ...common], false)).stderr, /literal JSON null/)
+  writeFileSync(file, 'model = "gpt-5.6-luna"\n')
+  await runCli(['agent', 'apply', agentId, '-f', file, ...common])
+  assert.deepEqual(agent.tools, [])
+  assert.equal(agent.text, null)
+  assert.equal(agent.instructions, null)
+  assert.deepEqual(methods, ['POST', 'GET', 'GET', 'POST'])
+  writeFileSync(file, 'llm = "old"\n')
+  assert.match((await runCli(['agent', 'validate', '-f', file], false)).stderr, /Retired manifest field/)
+  writeFileSync(file, 'model = "gpt-5.6-luna"\n[[tools]]\ntype = "mcp"\nserver_label = "private"\ntransport = { type = "http", server_url = "https://example.com/mcp", headers = { Authorization = "secret" } }\n')
+  assert.match((await runCli(['agent', 'validate', '-f', file], false)).stderr, /credentials belong to the Session/)
+  console.log('Agents CLI protocol and manifest round-trip smoke passed (local HTTP fixture)')
 } finally {
-  await new Promise((resolve) => server.close(resolve))
+  await new Promise(resolve => server.close(resolve))
   rmSync(fixtureDir, { recursive: true, force: true })
 }
-
 function listen(httpServer) {
   return new Promise((resolve, reject) => {
     httpServer.once('error', reject)

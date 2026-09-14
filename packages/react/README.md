@@ -1,56 +1,33 @@
 # @rebyte/agent-react
 
-Headless React state for Rebyte Agent interfaces.
+Headless React state for native Agents API Sessions. The browser calls your
+same-origin application server, never the organization API directly.
 
-```sh
-pnpm add https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest/download/rebyte-agent-react.tgz
+```tsx
+import { createAgentSessionTransport, useAgentSession } from '@rebyte/agent-react'
+const transport = createAgentSessionTransport({ url: '/api/sessions' })
+// Inside a React component:
+const chat = useAgentSession({ transport, initialSessionId, onSession })
 ```
 
-Use `useRebyteChat` with `createFetchTransport`. The browser calls an endpoint
-owned by your application; the server executes the Agent with the official
-OpenAI SDK and forwards the SSE body.
+Persist `chat.sessionId` via `onSession`, then pass it as `initialSessionId` on
+reload. `send(text)` subscribes before posting input and resolves with a Turn.
+`stop()` submits cancellation; the running send consumes the terminal event.
+`reset()` starts a new conversation without deleting the old Session.
+`upload(file)` creates the Session if needed and writes a file into its environment
+(5 MiB maximum in this example). `artifacts` supplies immutable download URLs.
 
-Set `fileUrl` to enable the headless upload method. The browser streams bytes to
-that same-origin application endpoint, receives a `file_id`, and sends it as a
-focused OpenAI Responses file or image input.
+Each assistant message has a `turnId` and a presentation-only `projection`:
+`textMessages`, `toolCalls`, `outputText`, and the received native `events`.
+Built-in server functions are distinct from client functions. A completed client
+result updates its matching call; the actual handoff is Session `requires_action`.
 
-This package owns chat state, uploads, interruption, and event reduction. It
-does not contain a Rebyte Responses client.
+History is restored from persisted Items and Turns. A recovered active Session is
+polled until settled. Live disconnects report an error; reload recovers output
+without resending input. The hook reports client-tool waiting as an error and does
+not run application handlers or submit their outputs. For those workflows, use
+the [official SDK recipe](../../examples/agents-api/README.md) or Commerce adapter.
 
-See the [repository README](../../README.md#headless-react) for usage.
-
-## Stream state
-
-Each assistant chat message has a `response` state:
-
-| Field | Meaning |
-|---|---|
-| `responseId` | Server Response ID, available from `response.created`. |
-| `textMessages` | Text items with stable `id`, `outputIndex`, text, status, and optional phase represented as `null` when absent. |
-| `outputText` | Text concatenated without separators, matching the OpenAI SDK. |
-| `toolCalls` | Managed MCP and client function calls, with their output indexes. |
-| `events` | Received Responses events for an optional inspector. |
-| `response` | Terminal server Response, or `null` while streaming. |
-
-`message.content` separates text items with blank lines for presentation. The
-optional UI renders texts and tools in output-index order. Completed items
-must agree with their deltas; malformed streams surface an error.
-
-Client functions have `execution: 'client'`, their `callId`, and status
-`awaiting_output` once arguments are complete. This is not a completed tool
-execution. The hook does not execute application functions or submit their
-outputs automatically. Use `onResponse` to hand completed calls to your host
-application and the official SDK to return outputs. See
-[Client tools](https://rebyte.ai/docs/skills-tools/client-tools).
-
-## Disconnects and errors
-
-`send()` rejects on stream errors or a connection that ends without a terminal
-Response, and calls `onError`. The existing Response ID and partial output
-remain available. The hook does not automatically retry, resume SSE, or poll
-for the final result. Your server may retrieve that Response to reconcile the
-UI. This includes `response_stream_restarted` after an upstream model retry.
-
-`stop()` invokes the transport's interruption endpoint before closing the
-browser stream. Closing or resetting a browser stream alone does not cancel
-the server Run. Stream readers are released on completion and early exit.
+Images are uploaded as Session files. The model can use hosted `view_image` to
+inspect them; the upload itself is not an inline model image message. No browser
+transport includes an organization API key.

@@ -1,477 +1,126 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { parse, stringify } from 'smol-toml'
 import { z } from 'zod'
-import {
-  NonStrictClientToolParametersSchema,
-  StrictClientToolParametersSchema,
-} from './client-tool-schema.js'
+import Ajv from 'ajv'
+import addFormats from 'ajv-formats'
+import type { Agent, AgentCreateParams } from 'openai/resources/beta/agents/agents'
 
-export const AGENT_MODEL_IDS = [
-  'deepseek-v4-pro',
-  'glm-5.3',
-  'qwen3.8-max',
-  'gemini-3.8-flash',
-  'kimi-k3',
-  'claude-sonnet-5',
-  'claude-opus-5',
-  'gpt-5.6',
-  'gpt-5.4-mini',
-] as const
-
-export type AgentModelId = typeof AGENT_MODEL_IDS[number]
-
-export const INTERNAL_CAPABILITY_IDS = [
-  'web_search_&_browse',
-  'sandbox',
-  'skills',
-  'coding_agent',
-  'ask_user_question',
-  'report_builder',
-  'company',
-  'app_builder_contract',
-  'github',
-  'sound_studio',
-  'speech_generator',
-  'http_client',
-] as const
-
-const DEFAULT_CAPABILITY_IDS = [
-  'web_search_&_browse',
-  'sandbox',
-  'skills',
-  'coding_agent',
-  'ask_user_question',
-  'report_builder',
-  'company',
-] as const
-
-const DEFAULT_MODEL: AgentModelId = 'deepseek-v4-pro'
-const DEFAULT_MAX_STEPS = 32
-const MAX_STEPS = 128
-const GITHUB_REPO_PATTERN =
-  /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\/[A-Za-z0-9._-]+$/
-const REPO_RELATIVE_DIRECTORY_PATTERN =
-  /^(?!\/)(?!.*(?:^|\/)\.\.?(?:\/|$))(?!.*\\)(?!.*[?#\s])[^/]+(?:\/[^/]+)*$/
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const CLIENT_TOOL_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
-const ENVIRONMENT_REFERENCE_PATTERN = /^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$/
-const INTERNAL_CAPABILITIES = new Set<string>(INTERNAL_CAPABILITY_IDS)
-
-const AgentSkillSchema = z.object({
-  ref: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/).refine(ref => !ref.includes('..')).optional(),
-  repo: z.string().min(1).max(300).regex(
-    GITHUB_REPO_PATTERN,
-    'repo must be a canonical GitHub owner/repo',
-  ).refine((repo) => {
-    const name = repo.split('/')[1]
-    return name !== '.' && name !== '..' && !repo.toLowerCase().endsWith('.git')
-  }, 'repo must not end in .git'),
-  path: z.string().min(1).max(1000).regex(
-    REPO_RELATIVE_DIRECTORY_PATTERN,
-    'path must be a canonical repo-relative directory',
-  ).refine(
-    (path) => path.toLowerCase() !== 'skill.md'
-      && !path.toLowerCase().endsWith('/skill.md'),
-    'path must name a directory, not SKILL.md',
-  ),
+const record = z.record(z.unknown())
+const name = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/)
+const functionTool = z.object({
+  type: z.literal('function'), name, description: z.string(), parameters: record,
+  defer_loading: z.literal(false).optional(),
 }).strict()
-
-const AgentNetworkPolicySchema = z.object({
-  allow_network_egress: z.boolean(),
-  domain_allowlist: z.enum(['none', 'package_managers_only', 'all_domains']),
-  additional_allowed_domains: z.array(z.string().trim().min(1).max(253)).max(128).default([]),
-  allow_public_traffic: z.boolean().default(false),
+const transport = z.union([
+  z.object({ type: z.literal('http'), server_url: z.string().url().refine(value => {
+    const url = new URL(value)
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && !url.hash
+  }, 'Use an HTTP(S) URL without credentials or a fragment'), headers: z.record(z.string()).optional() }).strict(),
+  z.object({ type: z.literal('stdio'), command: z.string().min(1), cwd: z.string().startsWith('/'),
+    args: z.array(z.string()).optional(), env_vars: z.array(z.string()).optional() }).strict(),
+])
+const mcpTool = z.object({
+  type: z.literal('mcp'), server_label: name, transport,
+  allowed_tools: z.array(z.string()).optional(), connection_origin: z.enum(['service', 'environment']).optional(),
+  credential_id: z.string().min(1).optional(), request_metadata: record.optional(), required: z.boolean().optional(),
 }).strict()
+const webSearch = z.object({ type: z.literal('web_search'), mode: z.enum(['live', 'disabled']).optional(),
+  context_size: z.enum(['low', 'medium', 'high']).optional(), allowed_domains: z.array(z.string()).optional() }).strict()
+const reasoning = z.object({ effort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']).optional(),
+  summary: z.enum(['auto', 'concise', 'detailed']).optional() }).strict()
+const text = z.object({ verbosity: z.enum(['low', 'medium', 'high']).optional(), format: z.union([
+  z.object({ type: z.literal('text') }).strict(),
+  z.object({ type: z.literal('json_schema'), schema: record }).strict(),
+]).optional() }).strict()
+const manifestSchema = z.object({
+  model: z.string().min(1), name: z.string().max(128).optional(),
+  instructions: z.string().max(1048576).optional(), instructions_file: z.string().min(1).optional(),
+  tools: z.array(z.union([functionTool, mcpTool, webSearch])).default([]),
+  reasoning: reasoning.optional(), text: text.optional(),
+  service_tier: z.enum(['auto', 'default', 'flex', 'priority']).optional(),
+  metadata: z.record(z.string().max(64), z.string().max(512)).refine(value => Object.keys(value).length <= 16).optional(),
+}).strict()
+export type AgentManifest = z.infer<typeof manifestSchema>
+const reserved = ['exec_command', 'write_stdin', 'apply_patch', 'view_image', 'list_mcp_resources', 'list_mcp_resource_templates', 'read_mcp_resource']
 
-const AgentClientToolFields = {
-  type: z.literal('function'),
-  name: z.string().regex(
-    CLIENT_TOOL_NAME_PATTERN,
-    'name must contain 1-64 letters, numbers, underscores, or hyphens',
-  ),
-  description: z.string().trim().min(1),
+function validateSchema(schema: Record<string, unknown>) {
+  const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: true })
+  addFormats(ajv)
+  ajv.compile(schema)
 }
-
-const AgentClientToolSchema = z.discriminatedUnion('strict', [
-  z.object({
-    ...AgentClientToolFields,
-    parameters: StrictClientToolParametersSchema,
-    strict: z.literal(true),
-  }).strict(),
-  z.object({
-    ...AgentClientToolFields,
-    parameters: NonStrictClientToolParametersSchema,
-    strict: z.literal(false),
-  }).strict(),
-])
-
-const AgentMcpServerManifestSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('url'),
-    name: z.string().trim().min(1).max(100),
-    url: z.string().trim().min(1).max(2_000),
-  }).strict(),
-  z.object({
-    type: z.literal('custom'),
-    name: z.string().trim().min(1).max(100).optional(),
-    server_id: z.string().regex(UUID_PATTERN, 'server_id must be a UUID'),
-  }).strict(),
-])
-
-const AgentManifestFileSchema = z.object({
-  name: z.string().trim().min(1).max(100),
-  description: z.string().trim().max(500).optional(),
-  llm: z.enum(AGENT_MODEL_IDS).optional(),
-  max_steps: z.number().int().positive().max(MAX_STEPS).optional(),
-  prompt: z.string().max(100_000).optional(),
-  prompt_file: z.string().trim().min(1).optional(),
-  capabilities: z.array(z.string().trim().min(1)).max(64).optional(),
-  mcp_servers: z.array(AgentMcpServerManifestSchema).max(64).optional(),
-  skills: z.array(AgentSkillSchema).max(128).optional(),
-  client_tools: z.array(AgentClientToolSchema).max(64).optional(),
-  network_policy: AgentNetworkPolicySchema.optional(),
-  sandbox_strategy: z.enum(['agent_shared', 'session_dedicated']).optional(),
-}).strict().superRefine((manifest, context) => {
-  if (manifest.prompt !== undefined && manifest.prompt_file !== undefined) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['prompt_file'],
-      message: 'prompt and prompt_file are mutually exclusive',
-    })
+function interpolate(value: unknown): unknown {
+  if (typeof value === 'string') {
+    const match = /^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$/.exec(value)
+    if (!match) return value
+    const resolved = process.env[match[1]!]
+    if (!resolved) throw new Error(`Set ${match[1]} before reading this manifest`)
+    return resolved
   }
-  validateUnique(manifest.capabilities ?? [], 'capability', ['capabilities'], context)
-  validateUnique(
-    (manifest.mcp_servers ?? []).map((server) => server.type === 'url'
-      ? `url:${server.name}`
-      : `custom:${server.server_id}`),
-    'MCP server',
-    ['mcp_servers'],
-    context,
-  )
-  if (
-    (manifest.capabilities?.length ?? DEFAULT_CAPABILITY_IDS.length)
-      + (manifest.mcp_servers?.length ?? 0) > 64
-  ) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['mcp_servers'],
-      message: 'capabilities and mcp_servers may contain at most 64 entries in total',
-    })
-  }
-  validateUnique(
-    (manifest.skills ?? []).map((skill) => `${skill.repo}:${skill.path}`),
-    'skill',
-    ['skills'],
-    context,
-  )
-  validateUnique(
-    (manifest.client_tools ?? []).map((tool) => tool.name),
-    'client tool',
-    ['client_tools'],
-    context,
-  )
-  for (const [index, capability] of (manifest.capabilities ?? []).entries()) {
-    const error = capabilityError(capability)
-    if (error) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['capabilities', index],
-        message: error,
-      })
-    }
-  }
-})
-
-export type AgentSkill = z.infer<typeof AgentSkillSchema>
-export type AgentNetworkPolicy = z.infer<typeof AgentNetworkPolicySchema>
-export type AgentClientTool = z.infer<typeof AgentClientToolSchema>
-
-export type AgentMcpServer =
-  | { kind: 'internal'; name: string }
-  | { kind: 'composio'; toolkit: string }
-  | { kind: 'custom'; serverId: string; name?: string }
-  | { type: 'url'; name: string; url: string }
-
-export interface ResolvedAgentManifest {
-  name: string
-  description: string | null
-  instructions: string
-  model: AgentModelId
-  maxSteps: number
-  mcpServers: AgentMcpServer[]
-  skills: AgentSkill[]
-  clientTools: AgentClientTool[]
-  networkPolicy: AgentNetworkPolicy | null
-  sandboxStrategy?: 'agent_shared' | 'session_dedicated'
-}
-
-export interface RebyteAgentRecord extends ResolvedAgentManifest {
-  id: string
-  object: 'agent'
-}
-
-function validateUnique(
-  values: readonly string[],
-  label: string,
-  path: Array<string | number>,
-  context: z.RefinementCtx,
-): void {
-  const seen = new Set<string>()
-  for (const [index, value] of values.entries()) {
-    if (seen.has(value)) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: [...path, index],
-        message: `duplicate ${label}: ${value}`,
-      })
-    }
-    seen.add(value)
-  }
-}
-
-function capabilityError(value: string): string | null {
-  if (INTERNAL_CAPABILITIES.has(value)) return null
-  if (value.startsWith('composio:')) {
-    const toolkit = value.slice('composio:'.length)
-    if (toolkit && toolkit.length <= 300 && toolkit.trim() === toolkit) return null
-    return 'Composio capability must be composio:<toolkit>'
-  }
-  if (value.startsWith('custom:')) {
-    return UUID_PATTERN.test(value.slice('custom:'.length))
-      ? null
-      : 'custom capability must be custom:<server UUID>'
-  }
-  return `unknown Rebyte capability: ${value}`
-}
-
-function capabilityToMcpServer(capability: string): AgentMcpServer {
-  if (INTERNAL_CAPABILITIES.has(capability)) {
-    return { kind: 'internal', name: capability }
-  }
-  if (capability.startsWith('composio:')) {
-    return { kind: 'composio', toolkit: capability.slice('composio:'.length) }
-  }
-  if (capability.startsWith('custom:')) {
-    return { kind: 'custom', serverId: capability.slice('custom:'.length) }
-  }
-  throw new Error(`Unsupported Rebyte capability: ${capability}`)
-}
-
-function mcpServerToCapability(server: AgentMcpServer): string {
-  if (!('kind' in server)) {
-    throw new Error('URL MCP servers cannot be serialized as capabilities')
-  }
-  if (server.kind === 'internal') {
-    if (!INTERNAL_CAPABILITIES.has(server.name)) {
-      throw new Error(`Agent contains an unsupported internal capability: ${server.name}`)
-    }
-    return server.name
-  }
-  if (server.kind === 'composio') return `composio:${server.toolkit}`
-  if (server.kind === 'custom') return `custom:${server.serverId}`
-  throw new Error('Agent contains an unsupported MCP server')
-}
-
-function resolveEnvironmentReference(
-  value: string,
-  manifestPath: string,
-  index: number,
-): string {
-  const match = ENVIRONMENT_REFERENCE_PATTERN.exec(value)
-  if (!match) return value
-  const variable = match[1]
-  if (!variable) return value
-  const resolved = process.env[variable]
-  if (!resolved) {
-    throw new Error(
-      `${manifestPath}: mcp_servers.${index}.url references unset or empty environment variable ${variable}`,
-    )
-  }
-  return resolved
-}
-
-function requireHttpUrl(value: string, manifestPath: string, index: number): string {
-  let url: URL
-  try {
-    url = new URL(value)
-  } catch {
-    throw new Error(`${manifestPath}: mcp_servers.${index}.url must be a valid URL`)
-  }
-  if (url.protocol !== 'https:') {
-    throw new Error(`${manifestPath}: mcp_servers.${index}.url must use https`)
-  }
-  if (url.username.length > 0 || url.password.length > 0 || url.hash.length > 0) {
-    throw new Error(`${manifestPath}: mcp_servers.${index}.url must not contain credentials or a fragment`)
-  }
-  if (url.toString().length > 2_000) {
-    throw new Error(`${manifestPath}: mcp_servers.${index}.url must be at most 2000 characters`)
-  }
+  if (Array.isArray(value)) return value.map(interpolate)
+  if (value !== null && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, interpolate(child)]))
   return value
 }
-
-function formatZodError(error: z.ZodError): string {
-  return error.issues.map((issue) => {
-    const path = issue.path.length > 0 ? `${issue.path.join('.')}: ` : ''
-    return `${path}${issue.message}`
-  }).join('\n')
-}
-
-function findJsonNullPath(value: unknown, path: string): string | null {
-  if (value === null) return path
-  if (Array.isArray(value)) {
-    for (const [index, item] of value.entries()) {
-      const found = findJsonNullPath(item, `${path}[${index}]`)
-      if (found !== null) return found
-    }
-    return null
+export function readAgentManifest(file: string): AgentManifest {
+  const raw = parse(readFileSync(file, 'utf8'))
+  for (const field of ['llm', 'prompt', 'prompt_file', 'capabilities', 'client_tools', 'mcp_servers', 'sandbox_strategy', 'network_policy', 'skills', 'max_steps', 'description']) {
+    if (field in raw) throw new Error(`Retired manifest field '${field}'. Use model/instructions_file/tools; environment and Skills belong to Session creation. See docs/migration.md.`)
   }
-  if (typeof value !== 'object') return null
-  for (const [key, item] of Object.entries(value)) {
-    const found = findJsonNullPath(item, `${path}.${key}`)
-    if (found !== null) return found
+  // Resolve references in tool declarations only; instructions retain literal examples.
+  if (raw.tools !== undefined) raw.tools = interpolate(raw.tools) as typeof raw.tools
+  const manifest = manifestSchema.parse(raw)
+  if (manifest.instructions !== undefined && manifest.instructions_file !== undefined) throw new Error('instructions and instructions_file are mutually exclusive')
+  if (manifest.instructions_file !== undefined) {
+    manifest.instructions = readFileSync(resolve(dirname(resolve(file)), manifest.instructions_file), 'utf8')
+    delete manifest.instructions_file
   }
-  return null
-}
-
-export function readAgentManifest(path: string): ResolvedAgentManifest {
-  const absolutePath = resolve(path)
-  let parsedToml: unknown
-  try {
-    parsedToml = parse(readFileSync(absolutePath, 'utf8'))
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    throw new Error(`${absolutePath}: unable to parse TOML: ${message}`)
-  }
-
-  const result = AgentManifestFileSchema.safeParse(parsedToml)
-  if (!result.success) {
-    throw new Error(`${absolutePath}: invalid agent.toml\n${formatZodError(result.error)}`)
-  }
-
-  const manifest = result.data
-  let instructions = manifest.prompt ?? ''
-  if (manifest.prompt_file !== undefined) {
-    const promptPath = resolve(dirname(absolutePath), manifest.prompt_file)
-    if (!existsSync(promptPath)) {
-      throw new Error(`${absolutePath}: prompt_file does not exist: ${promptPath}`)
-    }
-    instructions = readFileSync(promptPath, 'utf8')
-    if (instructions.length > 100_000) {
-      throw new Error(`${absolutePath}: prompt_file exceeds 100000 characters`)
-    }
-  }
-
-  const capabilities = manifest.capabilities ?? [...DEFAULT_CAPABILITY_IDS]
-  const declaredMcpServers: AgentMcpServer[] = (manifest.mcp_servers ?? []).map(
-    (server, index) => {
-      if (server.type === 'custom') {
-        return {
-          kind: 'custom',
-          serverId: server.server_id,
-          ...(server.name === undefined ? {} : { name: server.name }),
+  const names: string[] = []
+  for (const tool of manifest.tools) {
+    const label = tool.type === 'mcp' ? tool.server_label : tool.type === 'function' ? tool.name : 'web_search'
+    if (names.includes(label) || reserved.includes(label) || label.startsWith('rebyte_')) throw new Error(`Duplicate or reserved tool name: ${label}`)
+    names.push(label)
+    if (tool.type === 'function') validateSchema(tool.parameters)
+    if (tool.type === 'mcp') {
+      if (tool.transport.type === 'stdio' && tool.connection_origin !== undefined) throw new Error('Omit connection_origin for stdio MCP')
+      if (tool.transport.type === 'http' && tool.transport.headers !== undefined) {
+        for (const [key, value] of Object.entries(tool.transport.headers)) {
+          if (/^(authorization|proxy-authorization|cookie|x-api-key|api-key|x-auth-token)$/i.test(key)) throw new Error('MCP credentials belong to the Session or Vault')
+          if (/[\r\n]/.test(value)) throw new Error('Invalid MCP header value')
         }
       }
-      const resolvedUrl = resolveEnvironmentReference(server.url, absolutePath, index)
-      return {
-        type: 'url',
-        name: server.name,
-        url: requireHttpUrl(resolvedUrl, absolutePath, index),
-      }
-    },
-  )
-  return {
-    name: manifest.name,
-    description: manifest.description ?? null,
-    instructions,
-    model: manifest.llm ?? DEFAULT_MODEL,
-    maxSteps: manifest.max_steps ?? DEFAULT_MAX_STEPS,
-    mcpServers: [
-      ...capabilities.map(capabilityToMcpServer),
-      ...declaredMcpServers,
-    ],
-    skills: manifest.skills ?? [],
-    clientTools: manifest.client_tools ?? [],
-    networkPolicy: manifest.network_policy ?? null,
-    ...(manifest.sandbox_strategy === undefined ? {} : { sandboxStrategy: manifest.sandbox_strategy }),
+    }
   }
+  if (manifest.text?.format?.type === 'json_schema') validateSchema(manifest.text.format.schema)
+  return manifestSchema.parse(manifest)
 }
-
-export function serializeAgentManifest(agent: RebyteAgentRecord): string {
-  for (const [index, tool] of agent.clientTools.entries()) {
-    const nullPath = findJsonNullPath(
-      tool.parameters,
-      `clientTools[${index}].parameters`,
-    )
-    if (nullPath !== null) {
-      throw new Error(
-        `${nullPath} contains literal JSON null, which agent.toml cannot represent`,
-      )
-    }
-  }
-  const capabilities: string[] = []
-  const mcpServers: Array<Record<string, string>> = []
-  for (const server of agent.mcpServers) {
-    if ('kind' in server && server.kind !== 'custom') {
-      capabilities.push(mcpServerToCapability(server))
-      continue
-    }
-    if ('kind' in server) {
-      mcpServers.push({
-        type: 'custom',
-        ...(server.name === undefined ? {} : { name: server.name }),
-        server_id: server.serverId,
-      })
-      continue
-    }
-    mcpServers.push({
-      type: 'url',
-      name: server.name,
-      url: server.url,
-    })
-  }
-  const document: Record<string, unknown> = {
-    name: agent.name,
-    ...(agent.description === null ? {} : { description: agent.description }),
-    llm: agent.model,
-    max_steps: agent.maxSteps,
-    capabilities,
-    ...(agent.sandboxStrategy === undefined ? {} : { sandbox_strategy: agent.sandboxStrategy }),
-    prompt: agent.instructions,
-    ...(mcpServers.length === 0 ? {} : { mcp_servers: mcpServers }),
-    ...(agent.skills.length === 0 ? {} : { skills: agent.skills }),
-    ...(agent.clientTools.length === 0
-      ? {}
-      : { client_tools: agent.clientTools }),
-    ...(agent.networkPolicy === null
-      ? {}
-      : { network_policy: agent.networkPolicy }),
-  }
-  return `# agent.toml — generated by Rebyte\n${stringify(document)}`
+export function manifestToApiPayload(manifest: AgentManifest): AgentCreateParams {
+  // apply describes the complete saved configuration; omission clears old fields.
+  return { model: manifest.model, name: manifest.name ?? null, instructions: manifest.instructions ?? null,
+    tools: manifest.tools, metadata: manifest.metadata ?? {}, reasoning: manifest.reasoning ?? null,
+    text: manifest.text ?? null, service_tier: manifest.service_tier ?? 'auto', multi_agent: { enabled: false } } as AgentCreateParams
 }
-
-export function manifestToApiPayload(
-  manifest: ResolvedAgentManifest,
-  options?: {
-    includeNullDescription?: boolean
-    includeNullNetworkPolicy?: boolean
-  },
-): Record<string, unknown> {
-  return {
-    name: manifest.name,
-    ...(manifest.description === null && options?.includeNullDescription !== true
-      ? {}
-      : { description: manifest.description }),
-    ...(manifest.sandboxStrategy === undefined ? {} : { sandboxStrategy: manifest.sandboxStrategy }),
-    instructions: manifest.instructions,
-    model: manifest.model,
-    maxSteps: manifest.maxSteps,
-    mcpServers: manifest.mcpServers,
-    skills: manifest.skills,
-    clientTools: manifest.clientTools,
-    ...(manifest.networkPolicy === null && options?.includeNullNetworkPolicy !== true
-      ? {}
-      : { networkPolicy: manifest.networkPolicy }),
-  }
+function cleanDefinition(value: unknown, key = ''): unknown {
+  // Schemas and metadata are opaque JSON. Nulls within them are data.
+  if (['parameters', 'schema', 'request_metadata'].includes(key)) return value
+  if (Array.isArray(value)) return value.map(child => cleanDefinition(child))
+  if (value !== null && typeof value === 'object') return Object.fromEntries(Object.entries(value)
+    .filter(([, child]) => child !== null).map(([name, child]) => [name, cleanDefinition(child, name)]))
+  return value
+}
+function hasNull(value: unknown): boolean {
+  return value === null || (Array.isArray(value) ? value.some(hasNull)
+    : typeof value === 'object' && value !== null && Object.values(value).some(hasNull))
+}
+export function serializeAgentManifest(agent: Agent): string {
+  const tools = agent.tools.map(tool => {
+    if (tool.type === 'mcp' && tool.transport.type === 'stdio') {
+      const { connection_origin, ...definition } = tool
+      return definition
+    }
+    return tool
+  })
+  const output = cleanDefinition({ model: agent.model, name: agent.name, instructions: agent.instructions,
+    tools, reasoning: agent.reasoning, text: agent.text, service_tier: agent.service_tier, metadata: agent.metadata }) as Record<string, unknown>
+  if (hasNull(output)) throw new Error('TOML cannot represent literal JSON null. Retrieve this Agent as JSON with the official SDK; no export was written.')
+  return stringify(output)
 }

@@ -29,6 +29,11 @@ mkdirSync(outputDirectory, { recursive: true })
 
 const packages = [
   {
+    directory: 'server',
+    archive: `rebyte-agent-server-${version}.tgz`,
+    latestArchive: 'rebyte-agent-server.tgz',
+  },
+  {
     directory: 'react',
     archive: `rebyte-agent-react-${version}.tgz`,
     latestArchive: 'rebyte-agent-react.tgz',

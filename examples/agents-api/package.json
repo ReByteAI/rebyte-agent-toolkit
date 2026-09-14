@@ -1,0 +1,1 @@
+{"name":"@rebyte/example-agents-api","private":true,"type":"module","dependencies":{"openai":"7.15.0"},"scripts":{"chat":"node run.mjs chat","functions":"node run.mjs functions","hosted":"node run.mjs hosted"}}

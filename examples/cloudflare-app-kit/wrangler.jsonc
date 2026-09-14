@@ -13,6 +13,6 @@
   },
   "vars": {
     "REBYTE_API_URL": "https://api.rebyte.ai/v1",
-    "REBYTE_AGENT_ID": "62bfb44b-7dc6-40d7-a42a-55488cf42043"
+    "REBYTE_AGENT_ID": ""
   }
 }

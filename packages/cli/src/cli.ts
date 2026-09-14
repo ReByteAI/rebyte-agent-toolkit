@@ -98,7 +98,7 @@ function resolveBaseUrl(options: CommandOptions): string {
   const environment = options.environment ?? process.env.REBYTE_ENV ?? 'prod'
   if (environment === 'prod') return DEFAULT_BASE_URL
   if (environment === 'dev') {
-    return process.env.REBYTE_DEV_BASE_URL ?? 'http://localhost:3332'
+    return process.env.REBYTE_DEV_BASE_URL ?? 'http://127.0.0.1:34567'
   }
   if (environment === 'test') {
     const testUrl = process.env.REBYTE_TEST_BASE_URL
@@ -155,10 +155,7 @@ async function run(): Promise<void> {
     const manifest = readAgentManifest(options.file)
     const agent = await requireApiClient(options).updateAgent(
       id,
-      manifestToApiPayload(manifest, {
-        includeNullDescription: true,
-        includeNullNetworkPolicy: true,
-      }),
+      manifestToApiPayload(manifest),
     )
     process.stdout.write(`Applied agent.toml to Agent ${agent.id} (${agent.name})\n`)
     return

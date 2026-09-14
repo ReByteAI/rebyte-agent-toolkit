@@ -1,10 +1,4 @@
-name = "rebyte-app-kit-demo"
-description = "Managed Agent behind the hosted Rebyte App Kit example"
-llm = "gpt-5.4-mini"
-max_steps = 8
-prompt_file = "prompt.md"
-
-capabilities = [
-  "sandbox",
-  "skills"
-]
+name = "cloudflare-app-kit"
+model = "gpt-5.6-luna"
+instructions_file = "prompt.md"
+tools = []
