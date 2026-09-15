@@ -27,6 +27,14 @@ for (const [directory, name, prefix] of packages) {
   execFileSync('pnpm', ['--dir', packageDirectory, 'pack', '--pack-destination', outputDirectory], { stdio: 'inherit' })
   const archive = `${prefix}-${version}.tgz`
   const archivePath = join(outputDirectory, archive)
+  // zlib marks gzip's OS byte as Darwin on macOS and Unix on Linux. Normalize
+  // this informational header so identical packages have identical checksums.
+  const gzip = readFileSync(archivePath)
+  if (gzip[0] !== 0x1f || gzip[1] !== 0x8b || gzip[2] !== 8 || gzip[3] !== 0) {
+    throw new Error(`Unexpected gzip header: ${archive}`)
+  }
+  gzip[9] = 255 // RFC 1952: unknown OS; does not affect the compressed payload.
+  writeFileSync(archivePath, gzip)
   const manifest = JSON.parse(execFileSync('tar', ['-xOf', archivePath, 'package/package.json'], { encoding: 'utf8' }))
   for (const [dependency, spec] of Object.entries(manifest.dependencies || {})) {
     if (dependency.startsWith('@rebyteai/') && spec !== version) throw new Error(`${name}: ${dependency} must use registry version ${version}, got ${spec}`)

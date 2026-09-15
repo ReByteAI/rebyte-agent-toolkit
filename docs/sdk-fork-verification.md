@@ -2,8 +2,8 @@
 
 The local Toolkit now uses `@rebyteai/agent-sdk`, built from the pinned OpenAI
 TypeScript API client source. See `packages/sdk/UPSTREAM.md` for provenance and
-maintenance. No SDK package has been published and no production service was
-changed for this work. The separate Python Commerce integration continues using
+maintenance. The initial checks below preceded npm publication. No production
+service was changed for this work. The separate Python Commerce integration continues using
 the upstream Python API client; this fork is TypeScript.
 
 ## Verified locally
@@ -68,3 +68,48 @@ APP_KIT_URL=http://127.0.0.1:5101 pnpm --filter @rebyte/example-react-chat test:
 The organization needs model/compute credit and the documented key permissions.
 Start the local Relay and AppKit before live checks. Do not rebuild packages
 while exercising live streams: the development watchers restart the app server.
+
+## npm release — 2026-09-15
+
+Published `0.2.0` under the organization owned by the maintainer, `@rebyteai`:
+
+- `@rebyteai/agent-sdk`
+- `@rebyteai/agent-server`
+- `@rebyteai/agent-react`
+- `@rebyteai/agent-ui`
+- `@rebyteai/cli`
+
+Release source: `fb15a1c3e80ded1f7518739fdc354ba743015bec`, tag `v0.2.0`.
+All five registry version endpoints returned the original archive SHA-512
+integrities after publication. npm trusted publishers were configured for
+`ReByteAI/rebyte-agent-toolkit`, workflow `release.yml`, with direct publication
+allowed. No long-lived npm token was added to GitHub.
+
+The first consumer installation attempts received 404 for npm package metadata
+while version endpoints and public/latest settings already existed. Once metadata
+propagated, installation of all five packages from npm succeeded in a fresh
+consumer project, with no workspace links or package overrides.
+
+Verified against the installed npm packages:
+- SDK ESM/CommonJS/subpath imports, default URL/key behavior and wire serialization.
+- AppKit React/UI ESM and CommonJS imports, CSS export, server adapter health route
+  constructed with API key and Agent ID only.
+- Installed `pnpm exec rebyte --help`.
+- Real local API chat: Agent and Session creation, completed model turn, response
+  retrieval, no-environment behavior, deletion and 404 after cleanup. Test Agent
+  `agent_08bc2160fedd49489a44bf554339e404`, Session
+  `sess_b175839347244d818d6d6f579aefc788`; both deleted.
+
+GitHub CI run `34911085158` passed. Release runs `34911087415` and `34911436802`
+passed build/typechecks/tests but refused to replace locally published archives
+whose rebuilt bytes differed. The second run preserves candidates for inspection.
+The original archives were verified again against npm before creating the GitHub
+Release. No npm version was overwritten or republished.
+
+The archive difference was isolated to gzip's OS header byte: macOS wrote `19`,
+Linux wrote `3`. All five decompressed tar archives were byte-identical, including
+every file and its metadata. Future packing normalizes this informational byte to
+`255` (unknown OS), preserving strict whole-archive integrity verification across
+platforms. The already-published 0.2.0 archives remain unchanged.
+
+Release: https://github.com/ReByteAI/rebyte-agent-toolkit/releases/tag/v0.2.0
