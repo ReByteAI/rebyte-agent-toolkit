@@ -4,6 +4,15 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to verify and publish
+        required: true
+        type: string
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 permissions:
   contents: write
@@ -18,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
       - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
         with:
           version: 10.27.0
@@ -33,21 +44,29 @@ jobs:
       - run: pnpm build
       - name: Verify tag matches every package version
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_TAG^{commit}")"
+          version="${RELEASE_TAG#v}"
           test "$(node -p "require('./package.json').version")" = "$version"
           for package in sdk server react ui cli; do
             test "$(node -p "require('./packages/$package/package.json').version")" = "$version"
           done
       - name: Build release archives
         run: pnpm pack:release "$GITHUB_WORKSPACE/release"
+      - name: Preserve candidate archives for inspection and recovery
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-candidate-${{ github.run_id }}
+          path: release/
+          retention-days: 30
       - name: Publish npm packages through OIDC
         run: node scripts/publish-release.mjs "$GITHUB_WORKSPACE/release"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release already exists; preserving its assets."
           else
-            gh release create "$GITHUB_REF_NAME" release/* --verify-tag --generate-notes
+            gh release create "$RELEASE_TAG" release/* --verify-tag --generate-notes
           fi
