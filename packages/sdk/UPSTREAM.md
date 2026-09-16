@@ -22,6 +22,8 @@ not the separate `@openai/agents` local orchestration framework.
   type remains `openai_hosted`, including returned Sessions and SSE events.
 - `src/resources/beta/agents/agents.ts`: typed GitHub Skill extension already
   implemented by Rebyte. Request serialization and streaming stay upstream.
+  The Session `AgentTool` union also retains `tool_search`, already accepted by
+  upstream input/persisted Agent types, to describe Rebyte's returned configuration.
 - Package build: workspace dependencies and upstream TypeScript 6.0.3; upstream dual build.
 
 ## Updating

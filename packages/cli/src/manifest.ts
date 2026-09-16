@@ -10,7 +10,7 @@ const record = z.record(z.unknown())
 const name = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/)
 const functionTool = z.object({
   type: z.literal('function'), name, description: z.string(), parameters: record,
-  defer_loading: z.literal(false).optional(),
+  defer_loading: z.boolean().optional(),
 }).strict()
 const transport = z.union([
   z.object({ type: z.literal('http'), server_url: z.string().url().refine(value => {
@@ -27,6 +27,7 @@ const mcpTool = z.object({
 }).strict()
 const webSearch = z.object({ type: z.literal('web_search'), mode: z.enum(['live', 'disabled']).optional(),
   context_size: z.enum(['low', 'medium', 'high']).optional(), allowed_domains: z.array(z.string()).optional() }).strict()
+const toolSearch = z.object({ type: z.literal('tool_search') }).strict()
 const reasoning = z.object({ effort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']).optional(),
   summary: z.enum(['auto', 'concise', 'detailed']).optional() }).strict()
 const text = z.object({ verbosity: z.enum(['low', 'medium', 'high']).optional(), format: z.union([
@@ -36,13 +37,13 @@ const text = z.object({ verbosity: z.enum(['low', 'medium', 'high']).optional(),
 const manifestSchema = z.object({
   model: z.string().min(1), name: z.string().max(128).optional(),
   instructions: z.string().max(1048576).optional(), instructions_file: z.string().min(1).optional(),
-  tools: z.array(z.union([functionTool, mcpTool, webSearch])).default([]),
+  tools: z.array(z.union([functionTool, mcpTool, webSearch, toolSearch])).default([]),
   reasoning: reasoning.optional(), text: text.optional(),
   service_tier: z.enum(['auto', 'default', 'flex', 'priority']).optional(),
   metadata: z.record(z.string().max(64), z.string().max(512)).refine(value => Object.keys(value).length <= 16).optional(),
 }).strict()
 export type AgentManifest = z.infer<typeof manifestSchema>
-const reserved = ['exec_command', 'write_stdin', 'apply_patch', 'view_image', 'list_mcp_resources', 'list_mcp_resource_templates', 'read_mcp_resource']
+const reserved = ['exec_command', 'write_stdin', 'apply_patch', 'view_image', 'list_mcp_resources', 'list_mcp_resource_templates', 'read_mcp_resource', 'search_tools', 'call_tool', 'tool_search']
 
 function validateSchema(schema: Record<string, unknown>) {
   const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: true })
@@ -75,9 +76,10 @@ export function readAgentManifest(file: string): AgentManifest {
     delete manifest.instructions_file
   }
   const names: string[] = []
+  if (manifest.tools.some(tool => tool.type === 'function' && tool.defer_loading) && !manifest.tools.some(tool => tool.type === 'tool_search')) throw new Error('defer_loading=true requires a tool_search tool')
   for (const tool of manifest.tools) {
-    const label = tool.type === 'mcp' ? tool.server_label : tool.type === 'function' ? tool.name : 'web_search'
-    if (names.includes(label) || reserved.includes(label) || label.startsWith('rebyte_')) throw new Error(`Duplicate or reserved tool name: ${label}`)
+    const label = tool.type === 'mcp' ? tool.server_label : tool.type === 'function' ? tool.name : tool.type
+    if (names.includes(label) || ((tool.type === 'function' || tool.type === 'mcp') && reserved.includes(label)) || label.startsWith('rebyte_')) throw new Error(`Duplicate or reserved tool name: ${label}`)
     names.push(label)
     if (tool.type === 'function') validateSchema(tool.parameters)
     if (tool.type === 'mcp') {

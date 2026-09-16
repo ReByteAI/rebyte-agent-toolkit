@@ -2335,6 +2335,7 @@ export interface AgentTextParam {
  */
 export type AgentTool =
   | AgentTool.AgentToolResourceFunction
+  | AgentToolParam.AgentToolConfigParamToolSearch
   | AgentTool.AgentToolResourceProgrammaticToolCalling
   | AgentTool.AgentToolResourceMcp
   | AgentTool.AgentToolResourceWebSearch;

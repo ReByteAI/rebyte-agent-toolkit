@@ -8,6 +8,7 @@
   "scripts": {
     "chat": "node run.mjs chat",
     "functions": "node run.mjs functions",
-    "hosted": "node run.mjs hosted"
+    "hosted": "node run.mjs hosted",
+    "deferred-functions": "node run.mjs deferred-functions"
   }
 }

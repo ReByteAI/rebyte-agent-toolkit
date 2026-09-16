@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import Rebyte, { rebyteSandbox } from '@rebyteai/agent-sdk'
 const mode = process.argv[2] ?? 'chat'
-if (!['chat', 'functions', 'hosted'].includes(mode)) throw new Error('Choose chat, functions, or hosted')
+if (!['chat', 'functions', 'deferred-functions', 'hosted'].includes(mode)) throw new Error('Choose chat, functions, deferred-functions, or hosted')
+const usesFunctions = mode === 'functions' || mode === 'deferred-functions'
 const client = new Rebyte({ apiKey: process.env.REBYTE_API_KEY,
   maxRetries: 0 })
 const sessions = client.beta.agents.sessions
@@ -13,18 +14,18 @@ try {
   agent = await client.beta.agents.create({ name: `Recipe ${mode} ${randomUUID()}`,
     model: process.env.REBYTE_MODEL ?? 'gpt-5.6-luna',
     instructions: 'Follow the user request. Use the provided tool when requested. Never invent tool results.',
-    tools: mode === 'functions' ? [{ type: 'function', name: 'lookup_order',
-      description: 'Look up an order in the application.', parameters: { type: 'object',
+    tools: usesFunctions ? [...(mode === 'deferred-functions' ? [{ type: 'tool_search' }] : []), { type: 'function', name: 'lookup_order',
+      description: 'Look up an order in the application.', defer_loading: mode === 'deferred-functions', parameters: { type: 'object',
         properties: { order_id: { type: 'string' } }, required: ['order_id'], additionalProperties: false } }] : [],
   })
-  const input = mode === 'chat' ? 'Reply exactly RECIPE_CHAT_OK.' : mode === 'functions'
+  const input = mode === 'chat' ? 'Reply exactly RECIPE_CHAT_OK.' : usesFunctions
     ? 'Call lookup_order for order demo-001 and report its delivery code.'
     : 'Read /workspace/input.txt using exec_command, then use apply_patch to create /workspace/outputs/result.txt with exactly the same bytes (one line, exactly one trailing newline, no blank lines). Run cmp /workspace/input.txt /workspace/outputs/result.txt to verify the bytes; correct any mismatch before finishing. Report the file contents.'
   session = await sessions.create({ agent_id: agent.id, input,
     ...(mode === 'hosted' ? { environment: rebyteSandbox({ files: [{ type: 'inline', path: '/workspace/input.txt', data: Buffer.from('RECIPE_FILE_OK\n').toString('base64') }] }) } : {}),
   })
   // Durable polling is also useful after an SSE disconnect. It never resubmits input.
-  const deadline = Date.now() + 180_000
+  const deadline = Date.now() + 300_000
   const handled = new Set()
   while (true) {
     session = await sessions.retrieve(session.id)
@@ -55,9 +56,10 @@ try {
   for await (const item of sessions.items.list(session.id, { order: 'asc' })) items.push(item)
   const answer = items.filter(i => i.type === 'message' && i.role === 'assistant')
     .flatMap(i => i.content.filter(c => c.type === 'output_text').map(c => c.text)).join('\n')
-  assert.match(answer, new RegExp(mode === 'chat' ? 'RECIPE_CHAT_OK' : mode === 'functions' ? 'HOST_ORDER_OK' : 'RECIPE_FILE_OK'))
+  assert.match(answer, new RegExp(mode === 'chat' ? 'RECIPE_CHAT_OK' : usesFunctions ? 'HOST_ORDER_OK' : 'RECIPE_FILE_OK'))
   if (mode !== 'hosted') assert.equal(session.environment.type, 'none')
-  if (mode === 'functions') assert(calls > 0)
+  if (usesFunctions) assert(calls > 0)
+  if (mode === 'deferred-functions') assert(items.some(item => item.type === 'function_call' && item.name === 'tool_search'))
   if (mode === 'hosted') {
     const artifacts = await sessions.artifacts.list(session.id)
     const file = artifacts.data.find(a => a.path === '/workspace/outputs/result.txt')

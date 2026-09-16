@@ -12,6 +12,7 @@ export REBYTE_API_KEY='rbk_...'
 # export REBYTE_BASE_URL='http://127.0.0.1:34567/v1'
 pnpm --filter @rebyte/example-agents-api chat
 pnpm --filter @rebyte/example-agents-api functions
+pnpm --filter @rebyte/example-agents-api deferred-functions
 pnpm --filter @rebyte/example-agents-api hosted
 ```
 
@@ -23,6 +24,7 @@ model; the default is `gpt-5.6-luna`. No existing Agent or Session is assumed.
 | --- | --- |
 | `chat` | Agent creation, Session creation with initial input, omitted environment resolves to none, completed Turn and text |
 | `functions` | No Sandbox, authoritative `requires_action`, validated host arguments, function-result submission, model continuation |
+| `deferred-functions` | Explicit `tool_search`, deferred order lookup, discovery followed by the same client handler, no Sandbox |
 | `hosted` | Inline input file, lazy hosted Sandbox, `exec_command`, patch request, output file copied to Artifact, exact downloaded bytes |
 
 The functions example's order lookup is deliberately local and deterministic; the
@@ -36,6 +38,38 @@ For live streaming, follow the [App Kit implementation](../react-chat/README.md)
 subscribe before submitting input, retain Session/Turn IDs, and reconcile persisted
 Items after reconnect. Session creation itself is not idempotent; investigate an
 ambiguous creation failure before creating a replacement.
+
+## Load application functions on demand
+
+Add `{ type: 'tool_search' }` to `agent.tools` and set `defer_loading: true` on
+selected function definitions. The full definition is still supplied by your
+application. The runtime exposes its schema to the model after discovery;
+the model then calls the function by its original name. Handle its
+`required_actions` and return `agent.session.input.tool_result` just as in the
+`functions` recipe. Loaded definitions remain available in that Session.
+
+Adding `tool_search` does not defer every function: omitted/false stays eager.
+True without a `tool_search` entry is rejected. Session overrides must contain
+the complete tools array, including `tool_search` and each function.
+
+CLI `agent.toml` uses the same configuration:
+
+```toml
+model = "gpt-5.6-luna"
+
+[[tools]]
+type = "tool_search"
+
+[[tools]]
+type = "function"
+name = "lookup_order"
+description = "Look up an order in the application."
+defer_loading = true
+parameters = { type = "object", properties = { order_id = { type = "string" } }, required = ["order_id"], additionalProperties = false }
+```
+
+MCP uses automatic discovery independently; neither application function search
+nor service-origin MCP requires a Sandbox.
 
 ## MCP without a Sandbox
 

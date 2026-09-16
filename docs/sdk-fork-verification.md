@@ -1,5 +1,19 @@
 # Rebyte SDK fork verification — 2026-09-15
 
+## Local function search verification — 2026-09-16
+
+- SDK accepts `tool_search` and deferred functions; resolved Session tool types
+  retain that declaration. CLI manifest parsing supports and validates the pair.
+- SDK dual build, package smoke, CLI build/smoke and all Toolkit workspace
+  typechecks passed. The documented TOML example parses; removing `tool_search`
+  while retaining `defer_loading=true` is rejected.
+- Real local `pnpm --filter @rebyte/example-agents-api deferred-functions` passed:
+  Agent creation, Session creation, model search, client order lookup, result
+  submission, completed Turn and resource deletion. Test Agent
+  `agent_8108417ada044b0ab79726beda3814ae`, Session
+  `sess_cdc2a0d319e64c88b5f39a5c7eb0cfe1`; temporary Dev key revoked.
+- These changes are local; npm and production have not been updated.
+
 The local Toolkit now uses `@rebyteai/agent-sdk`, built from the pinned OpenAI
 TypeScript API client source. See `packages/sdk/UPSTREAM.md` for provenance and
 maintenance. The initial checks below preceded npm publication. No production
