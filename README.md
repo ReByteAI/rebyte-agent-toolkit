@@ -28,17 +28,17 @@ Use Rebyte's guide for supported features and Rebyte-specific behavior.
 ## Install a release
 
 Use Node.js 22+. You do not need to clone this repository to use the SDK.
-Install the versioned release package in your application:
+Install the current release package in your application:
 
 ```sh
-pnpm add @rebyteai/agent-sdk@0.2.0
+pnpm add @rebyteai/agent-sdk
 export REBYTE_API_KEY='rbk_...'
 ```
 
 For AppKit, install the components your application uses:
 
 ```sh
-pnpm add @rebyteai/agent-react@0.2.0 @rebyteai/agent-ui@0.2.0 @rebyteai/agent-server@0.2.0
+pnpm add @rebyteai/agent-react @rebyteai/agent-ui @rebyteai/agent-server
 ```
 
 Dependencies between Rebyte packages are pinned to the same release and installed
@@ -48,11 +48,11 @@ applications need only the API SDK; UI components are optional.
 For the CLI:
 
 ```sh
-pnpm add -D @rebyteai/cli@0.2.0
+pnpm add -D @rebyteai/cli
 pnpm exec rebyte --help
 ```
 
-Packages are published on npm. [GitHub Releases](https://github.com/ReByteAI/rebyte-agent-toolkit/releases/tag/v0.2.0)
+Packages are published on npm. [GitHub Releases](https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest)
 provide release notes and matching archives with SHA-256 checksums.
 
 ## Run or modify the examples
@@ -69,7 +69,7 @@ pnpm build
 
 | Example | What you learn |
 | --- | --- |
-| [Rebyte SDK recipes](examples/agents-api/README.md) | Create an Agent and Session; no-Sandbox chat; client functions; files and Artifacts; cleanup |
+| [Rebyte SDK recipes](examples/agents-api/README.md) | Create an Agent and Session; no-Sandbox chat; eager/deferred client functions; files and Artifacts; cleanup |
 | [Node App Kit](examples/react-chat/README.md) | Streaming React chat, upload, downloads, cancellation, reload and Session isolation |
 | [Cloudflare App Kit](examples/cloudflare-app-kit/README.md) | The same server adapter and UI on a Worker |
 | [Commerce](https://github.com/ReByteAI/commerce-agent-starter/tree/main/rebyte) | Python host executes catalog/cart/presentation functions and installs per-Session Skills |

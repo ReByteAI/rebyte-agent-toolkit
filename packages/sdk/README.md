@@ -6,7 +6,7 @@ Node.js 22+. Apache-2.0. Upstream provenance: [UPSTREAM.md](UPSTREAM.md).
 Install in your application; no repository clone is required:
 
 ```sh
-pnpm add @rebyteai/agent-sdk@0.2.0
+pnpm add @rebyteai/agent-sdk
 export REBYTE_API_KEY='rbk_...'
 ```
 
@@ -41,5 +41,13 @@ Rebyte's server capability limits still apply; see the
 [API docs](https://rebyte.ai/docs/agents-api/overview).
 
 Install released versions from npm. Matching archives and SHA-256 checksums are
-available in [GitHub Releases](https://github.com/ReByteAI/rebyte-agent-toolkit/releases/tag/v0.2.0).
+available in [GitHub Releases](https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest).
 To modify the SDK itself, clone this repository and run `pnpm install && pnpm build`.
+
+
+For client functions, include `{ type: 'tool_search' }` and set
+`defer_loading: true` on selected definitions. Discovery stays within a Session;
+your application still executes the resulting client function calls. MCP
+connections use automatic discovery independently. Follow the
+[Tool Search guide](https://rebyte.ai/docs/agents-api/tools/functions#load-functions-on-demand)
+and [runnable recipes](https://github.com/ReByteAI/rebyte-agent-toolkit/tree/main/examples/agents-api).
