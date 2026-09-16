@@ -127,3 +127,35 @@ every file and its metadata. Future packing normalizes this informational byte t
 platforms. The already-published 0.2.0 archives remain unchanged.
 
 Release: https://github.com/ReByteAI/rebyte-agent-toolkit/releases/tag/v0.2.0
+
+
+## Tool Search publication — 2026-09-17
+
+Release `0.2.1` adds the resolved Session `tool_search` union member, CLI support
+for `tool_search` / `defer_loading`, and the `deferred-functions` recipe. Requests
+already supported these fields in 0.2.0. Existing eager client functions keep
+working. Version `0.2.2` additionally updates installation instructions and the
+bundled SDK/CLI usage guidance; the AppKit server/React/UI implementation is unchanged.
+
+Production Relay passed a real deferred client function and result handoff,
+second-Turn reuse without a new search, and live DeepWiki MCP search/execution.
+Both Sessions had no Sandbox. All smoke-owned Agents and Sessions were deleted.
+Public docs now describe both discovery paths, cache freshness and context tradeoffs.
+
+Public npm 0.2.1 archives matched the locally packed SHA-512 integrity for every
+package. A fresh consumer installed all five packages, loaded their advertised
+exports (ESM for all; CommonJS for SDK/React/UI; server is ESM-only), validated the
+public documentation's deferred TOML and completed a production SDK model turn.
+
+The release helper now waits for npm scanning before verifying registry bytes.
+Recovery workflow `35163198938` completed 0.2.1 without moving its immutable tag
+or changing package archives. Final 0.2.2 source is `3c6b362` and release workflow
+is `35163704622`.
+
+
+Workflow `35163704622` succeeded and published all five 0.2.2 packages plus the
+[matching GitHub Release](https://github.com/ReByteAI/rebyte-agent-toolkit/releases/tag/v0.2.2).
+All registry SHA-512 integrities match local archives. A fresh public npm install,
+advertised imports, deferred CLI manifest validation and a real production
+Agent/Session/model round trip passed with 0.2.2. Test resources were deleted and
+the temporary API Key revoked; a subsequent API call returned 401.
