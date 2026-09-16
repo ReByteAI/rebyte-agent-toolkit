@@ -48,3 +48,14 @@ Keep the original verified archives from a locally bootstrapped release. A tag
 workflow rerun skips npm publication only when the rebuilt archives match the
 registry byte for byte. If a rebuild differs, investigate and use the original
 verified archives for the GitHub Release; never replace an npm version.
+
+
+npm scans newly accepted uploads before they become publicly installable. The
+workflow submits all packages, then waits up to 20 minutes and verifies every
+SHA-512 integrity. A 404 immediately after upload is not a failed upload. If a
+run stops while a version is staged, wait for its scan/approval status before
+retrying; do not overwrite the tag or increment versions to bypass a scan.
+
+A manual dispatch uses package source from the existing release tag and the
+publishing helper from the immutable workflow revision. This allows a reviewed
+publication-check fix to finish an existing release without changing its archives.

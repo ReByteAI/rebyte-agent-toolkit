@@ -29,6 +29,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.tag || github.ref_name }}
+      # Recovery may improve registry verification without moving an immutable
+      # release tag. Only this helper comes from the reviewed workflow commit;
+      # package source, versions and archives still come from RELEASE_TAG.
+      - name: Load publishing helper from this workflow revision
+        env:
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          git fetch --depth=1 origin "$WORKFLOW_SHA"
+          git show "$WORKFLOW_SHA:scripts/publish-release.mjs" > scripts/publish-release.mjs
       - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
         with:
           version: 10.27.0
