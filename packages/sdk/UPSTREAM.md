@@ -24,6 +24,11 @@ not the separate `@openai/agents` local orchestration framework.
   implemented by Rebyte. Request serialization and streaming stay upstream.
   The Session `AgentTool` union also retains `tool_search`, already accepted by
   upstream input/persisted Agent types, to describe Rebyte's returned configuration.
+- MCP transport unions also accept Rebyte's `connection` transport. Its opaque,
+  organization-bound `connection_id` is created when an organization admin attaches
+  an existing Personal or Organization connection in Platform. It contains no
+  provider token. Agent retrieval/update and Session snapshots preserve it; public
+  clients cannot mint references from another user's raw connection ID.
 - Package build: workspace dependencies and upstream TypeScript 6.0.3; upstream dual build.
 
 ## Updating

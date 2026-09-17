@@ -81,6 +81,7 @@ export {
   type InputContent,
   type InputContentParam,
   type McpTransport,
+  type McpTransportConnection,
   type McpTransportParam,
   type MultiAgentConfig,
   type MultiAgentConfigParam,

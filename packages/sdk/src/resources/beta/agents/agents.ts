@@ -3385,7 +3385,15 @@ export namespace InputContentParam {
 /**
  * The transport used to connect to an MCP server.
  */
-export type McpTransport = McpTransport.McpTransportResourceHTTP | McpTransport.McpTransportResourceStdio;
+/** Rebyte extension. Obtain this organization-bound reference by attaching a
+ * Personal or Organization connection in Platform. Provider secrets are never
+ * returned. Preserve the reference when replacing an Agent's tools. */
+export interface McpTransportConnection {
+  type: 'connection';
+  connection_id: string;
+}
+
+export type McpTransport = McpTransport.McpTransportResourceHTTP | McpTransport.McpTransportResourceStdio | McpTransportConnection;
 
 export namespace McpTransport {
   /**
@@ -3439,7 +3447,8 @@ export namespace McpTransport {
  */
 export type McpTransportParam =
   | McpTransportParam.McpTransportConfigParamHTTP
-  | McpTransportParam.McpTransportConfigParamStdio;
+  | McpTransportParam.McpTransportConfigParamStdio
+  | McpTransportConnection;
 
 export namespace McpTransportParam {
   /**
@@ -3902,7 +3911,8 @@ export namespace PersistedAgentToolParam {
  */
 export type PersistedMcpTransport =
   | PersistedMcpTransport.PersistedMcpTransportResourceHTTP
-  | PersistedMcpTransport.PersistedMcpTransportResourceStdio;
+  | PersistedMcpTransport.PersistedMcpTransportResourceStdio
+  | McpTransportConnection;
 
 export namespace PersistedMcpTransport {
   /**
@@ -3961,7 +3971,8 @@ export namespace PersistedMcpTransport {
  */
 export type PersistedMcpTransportParam =
   | PersistedMcpTransportParam.PersistedMcpTransportConfigParamHTTP
-  | PersistedMcpTransportParam.PersistedMcpTransportConfigParamStdio;
+  | PersistedMcpTransportParam.PersistedMcpTransportConfigParamStdio
+  | McpTransportConnection;
 
 export namespace PersistedMcpTransportParam {
   /**
@@ -4577,6 +4588,7 @@ export declare namespace Agents {
     type InputContent as InputContent,
     type InputContentParam as InputContentParam,
     type McpTransport as McpTransport,
+    type McpTransportConnection as McpTransportConnection,
     type McpTransportParam as McpTransportParam,
     type MultiAgentConfig as MultiAgentConfig,
     type MultiAgentConfigParam as MultiAgentConfigParam,

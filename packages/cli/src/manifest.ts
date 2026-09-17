@@ -13,6 +13,7 @@ const functionTool = z.object({
   defer_loading: z.boolean().optional(),
 }).strict()
 const transport = z.union([
+  z.object({ type: z.literal('connection'), connection_id: z.string().min(1).max(4096) }).strict(),
   z.object({ type: z.literal('http'), server_url: z.string().url().refine(value => {
     const url = new URL(value)
     return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && !url.hash
@@ -83,6 +84,7 @@ export function readAgentManifest(file: string): AgentManifest {
     names.push(label)
     if (tool.type === 'function') validateSchema(tool.parameters)
     if (tool.type === 'mcp') {
+      if (tool.transport.type === 'connection' && ((tool.connection_origin !== undefined && tool.connection_origin !== 'service') || tool.credential_id !== undefined)) throw new Error('Platform connections use service origin and manage their own credentials')
       if (tool.transport.type === 'stdio' && tool.connection_origin !== undefined) throw new Error('Omit connection_origin for stdio MCP')
       if (tool.transport.type === 'http' && tool.transport.headers !== undefined) {
         for (const [key, value] of Object.entries(tool.transport.headers)) {
