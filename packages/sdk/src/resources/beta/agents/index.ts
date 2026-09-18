@@ -64,6 +64,7 @@ export {
   type AgentText,
   type AgentTextParam,
   type AgentTool,
+  type DynamicWorkflowTool,
   type AgentToolParam,
   type AgentWaitForSubagentsCallItem,
   type AgentWebSearchCallItem,

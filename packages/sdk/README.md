@@ -51,3 +51,16 @@ your application still executes the resulting client function calls. MCP
 connections use automatic discovery independently. Follow the
 [Tool Search guide](https://rebyte.ai/docs/agents-api/tools/functions#load-functions-on-demand)
 and [runnable recipes](https://github.com/ReByteAI/rebyte-agent-toolkit/tree/main/examples/agents-api).
+
+
+## Dynamic Workflow
+
+SDK 0.2.3 and later accepts `{ type: 'dynamic_workflow' }` in saved-Agent
+and Session tools. The Agent receives `run_code`, which executes generated
+JavaScript against the Session's configured server tools. Each execution has a
+fresh isolate and a shared 300-second deadline. Client functions stay outside
+the program. This is a Rebyte extension, distinct from the upstream
+`programmatic_tool_calling` configuration.
+
+Use the [runnable example](../../examples/agents-api/dynamic-workflow.mjs) with a
+Rebyte API key. See the [Dynamic Workflow guide](https://rebyte.ai/docs/agents-api/tools/dynamic-workflow).

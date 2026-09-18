@@ -92,3 +92,18 @@ automatic search independently and need no `defer_loading` flag.
 See the [function guide](https://rebyte.ai/docs/agents-api/tools/functions),
 [MCP guide](https://rebyte.ai/docs/agents-api/tools/mcp) and
 [runnable deferred-functions recipe](../../examples/agents-api/README.md).
+
+
+## Dynamic Workflow
+
+CLI 0.2.3 and later accepts and exports this singleton tool declaration:
+
+```toml
+[[tools]]
+type = "dynamic_workflow"
+```
+
+Include the MCP or Web Search tools it should orchestrate in the same manifest.
+Environment tools become available when the application creates a Session with
+an environment. `run_code` is reserved and cannot be used as a client function
+name or MCP server label. See the [Dynamic Workflow guide](https://rebyte.ai/docs/agents-api/tools/dynamic-workflow).

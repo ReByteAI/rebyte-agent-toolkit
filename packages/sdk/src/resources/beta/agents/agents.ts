@@ -2331,9 +2331,18 @@ export interface AgentTextParam {
 }
 
 /**
+ * Rebyte Dynamic Workflow: compose the Session's server tools in generated
+ * JavaScript. Each execution uses a fresh isolate and a 300-second deadline.
+ */
+export interface DynamicWorkflowTool {
+  type: 'dynamic_workflow';
+}
+
+/**
  * A tool available to the agent.
  */
 export type AgentTool =
+  | DynamicWorkflowTool
   | AgentTool.AgentToolResourceFunction
   | AgentToolParam.AgentToolConfigParamToolSearch
   | AgentTool.AgentToolResourceProgrammaticToolCalling
@@ -2494,6 +2503,7 @@ export namespace AgentTool {
  * A tool available to the agent.
  */
 export type AgentToolParam =
+  | DynamicWorkflowTool
   | AgentToolParam.AgentToolConfigParamFunction
   | AgentToolParam.AgentToolConfigParamToolSearch
   | AgentToolParam.AgentToolConfigParamProgrammaticToolCalling
@@ -3562,6 +3572,7 @@ export interface OutputText {
  * A credential-free tool available to a reusable agent.
  */
 export type PersistedAgentTool =
+  | DynamicWorkflowTool
   | PersistedAgentTool.PersistedAgentToolResourceFunction
   | PersistedAgentTool.PersistedAgentToolResourceToolSearch
   | PersistedAgentTool.PersistedAgentToolResourceProgrammaticToolCalling
@@ -3731,6 +3742,7 @@ export namespace PersistedAgentTool {
  * A tool that can be stored on a reusable agent without session credentials.
  */
 export type PersistedAgentToolParam =
+  | DynamicWorkflowTool
   | PersistedAgentToolParam.PersistedAgentToolConfigParamFunction
   | PersistedAgentToolParam.PersistedAgentToolConfigParamToolSearch
   | PersistedAgentToolParam.PersistedAgentToolConfigParamProgrammaticToolCalling
@@ -4571,6 +4583,7 @@ export declare namespace Agents {
     type AgentText as AgentText,
     type AgentTextParam as AgentTextParam,
     type AgentTool as AgentTool,
+    type DynamicWorkflowTool as DynamicWorkflowTool,
     type AgentToolParam as AgentToolParam,
     type AgentWaitForSubagentsCallItem as AgentWaitForSubagentsCallItem,
     type AgentWebSearchCallItem as AgentWebSearchCallItem,

@@ -125,3 +125,24 @@ the upstream OpenAI skill union; the Rebyte SDK includes this variant.
 
 Rebyte's runtime, available models, billing and environment lifecycle are its own.
 The protocol name `openai_hosted` means Rebyte-hosted compute at the Rebyte endpoint.
+
+## Dynamic Workflow
+
+SDK 0.2.3 and later supports `{ type: 'dynamic_workflow' }`. It lets the Session
+model generate JavaScript that composes its server-side tools. The runnable
+example uses service MCP, without allocating a Session VM, and deletes its
+Session after streaming the answer.
+
+Build the SDK and use a Rebyte organization API key with `tasks:read` and
+`tasks:write`:
+
+```sh
+pnpm --filter @rebyteai/agent-sdk build
+export REBYTE_API_KEY='rbk_...'
+pnpm --filter @rebyte/example-agents-api dynamic-workflow
+```
+
+The example explicitly connects to `https://api.rebyte.ai/v1`. Each program runs
+in a fresh isolate with a 300-second deadline. Client functions remain in the
+ordinary Agent loop. See [the example](dynamic-workflow.mjs) and the
+[Dynamic Workflow guide](https://rebyte.ai/docs/agents-api/tools/dynamic-workflow).

@@ -29,6 +29,7 @@ const mcpTool = z.object({
 const webSearch = z.object({ type: z.literal('web_search'), mode: z.enum(['live', 'disabled']).optional(),
   context_size: z.enum(['low', 'medium', 'high']).optional(), allowed_domains: z.array(z.string()).optional() }).strict()
 const toolSearch = z.object({ type: z.literal('tool_search') }).strict()
+const dynamicWorkflow = z.object({ type: z.literal('dynamic_workflow') }).strict()
 const reasoning = z.object({ effort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']).optional(),
   summary: z.enum(['auto', 'concise', 'detailed']).optional() }).strict()
 const text = z.object({ verbosity: z.enum(['low', 'medium', 'high']).optional(), format: z.union([
@@ -38,13 +39,13 @@ const text = z.object({ verbosity: z.enum(['low', 'medium', 'high']).optional(),
 const manifestSchema = z.object({
   model: z.string().min(1), name: z.string().max(128).optional(),
   instructions: z.string().max(1048576).optional(), instructions_file: z.string().min(1).optional(),
-  tools: z.array(z.union([functionTool, mcpTool, webSearch, toolSearch])).default([]),
+  tools: z.array(z.union([functionTool, mcpTool, webSearch, toolSearch, dynamicWorkflow])).default([]),
   reasoning: reasoning.optional(), text: text.optional(),
   service_tier: z.enum(['auto', 'default', 'flex', 'priority']).optional(),
   metadata: z.record(z.string().max(64), z.string().max(512)).refine(value => Object.keys(value).length <= 16).optional(),
 }).strict()
 export type AgentManifest = z.infer<typeof manifestSchema>
-const reserved = ['exec_command', 'write_stdin', 'apply_patch', 'view_image', 'list_mcp_resources', 'list_mcp_resource_templates', 'read_mcp_resource', 'search_tools', 'call_tool', 'tool_search']
+const reserved = ['exec_command', 'write_stdin', 'apply_patch', 'view_image', 'list_mcp_resources', 'list_mcp_resource_templates', 'read_mcp_resource', 'search_tools', 'call_tool', 'tool_search', 'run_code']
 
 function validateSchema(schema: Record<string, unknown>) {
   const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: true })
