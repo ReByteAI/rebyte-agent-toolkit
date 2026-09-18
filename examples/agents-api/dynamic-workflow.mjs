@@ -8,7 +8,7 @@ const client = new Rebyte({
 const stream = await client.beta.agents.sessions.create({
   agent: {
     model: 'gpt-5.6-luna',
-    instructions: 'Use run_code exactly once: within that program, call tools.search_tools to discover the wiki tool, then tools.call_tool to read its actual output. Return { output: actualToolResult } and summarize it. Do not call MCP tools outside the program.',
+    instructions: 'Use run_code exactly once: within that program, call tools.search_tools with server docs and query read_wiki_structure, then call tools.call_tool with the returned server/name and arguments { repoName: "modelcontextprotocol/python-sdk" } to read its actual output. Return { output: actualToolResult } and summarize it. Do not call MCP tools outside the program.',
     tools: [
       { type: 'dynamic_workflow' },
       {
