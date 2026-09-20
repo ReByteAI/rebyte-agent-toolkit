@@ -31,7 +31,7 @@
   "scripts": {
     "build": "bash scripts/build",
     "typecheck": "tsc --noEmit --module esnext",
-    "smoke": "node checks/smoke.mjs"
+    "smoke": "node checks/smoke.mjs && node checks/workflow-agents.mjs && tsc --ignoreConfig --noEmit --strict --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext checks/workflow-agents-types.ts"
   },
   "devDependencies": {
     "@aws-sdk/credential-provider-node": "^3.972.47",

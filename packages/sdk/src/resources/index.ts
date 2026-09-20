@@ -157,3 +157,5 @@ export {
   type VideosPage,
 } from './videos';
 export { Webhooks } from './webhooks';
+
+export * from './workflow-agents/index';

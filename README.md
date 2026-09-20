@@ -70,6 +70,7 @@ pnpm build
 | Example | What you learn |
 | --- | --- |
 | [Rebyte SDK recipes](examples/agents-api/README.md) | Create an Agent and Session; no-Sandbox chat; eager/deferred client functions; files and Artifacts; cleanup |
+| [Workflow Agents](examples/agents-api/README.md#workflow-agents) | Generate or write fixed JavaScript, preview, test, publish, stream runs, use MCP and manage versions (GitHub source; not yet in npm 0.2.3) |
 | [Node App Kit](examples/react-chat/README.md) | Streaming React chat, upload, downloads, cancellation, reload and Session isolation |
 | [Cloudflare App Kit](examples/cloudflare-app-kit/README.md) | The same server adapter and UI on a Worker |
 | [Commerce](https://github.com/ReByteAI/commerce-agent-starter/tree/main/rebyte) | Python host executes catalog/cart/presentation functions and installs per-Session Skills |

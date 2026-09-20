@@ -1977,6 +1977,8 @@ export class OpenAI {
   safety: API.Safety = new API.Safety(this);
   webhooks: API.Webhooks = new API.Webhooks(this);
   beta: API.Beta = new API.Beta(this);
+  /** Create, test, publish and execute fixed JavaScript workflows on Rebyte. */
+  workflowAgents: API.WorkflowAgents = new API.WorkflowAgents(this);
   /**
    * Create large batches of API requests to run asynchronously.
    */

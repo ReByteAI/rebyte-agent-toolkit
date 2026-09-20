@@ -10,6 +10,9 @@
     "dynamic-workflow": "node dynamic-workflow.mjs",
     "functions": "node run.mjs functions",
     "hosted": "node run.mjs hosted",
-    "deferred-functions": "node run.mjs deferred-functions"
+    "deferred-functions": "node run.mjs deferred-functions",
+    "workflow-agent": "node workflow-agent.mjs",
+    "workflow-generate": "node workflow-generate.mjs",
+    "workflow-tools": "node workflow-tools.mjs"
   }
 }

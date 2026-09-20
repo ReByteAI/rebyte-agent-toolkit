@@ -29,6 +29,11 @@ not the separate `@openai/agents` local orchestration framework.
   an existing Personal or Organization connection in Platform. It contains no
   provider token. Agent retrieval/update and Session snapshots preserve it; public
   clients cannot mint references from another user's raw connection ID.
+- `src/resources/workflow-agents/`: Rebyte-only `client.workflowAgents` resource,
+  typed CRUD/version/publication/authoring APIs, run and generation SSE, and numeric
+  version pagination. Its stream parser preserves recoverable tool-failure events;
+  the upstream parser treats top-level `error` data as an API error. Non-idempotent
+  workflow POSTs default to no retry. Public workflow types are exported at root.
 - Package build: workspace dependencies and upstream TypeScript 6.0.3; upstream dual build.
 
 ## Updating
