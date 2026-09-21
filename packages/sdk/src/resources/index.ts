@@ -159,3 +159,5 @@ export {
 export { Webhooks } from './webhooks';
 
 export * from './workflow-agents/index';
+
+export * from './schedules/index';

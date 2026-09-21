@@ -160,3 +160,34 @@ Public types are exported at the package root and
 `WorkflowVersion`, `WorkflowRun`, `WorkflowDefinition`, `WorkflowDraft`,
 `WorkflowRunEvent` and `WorkflowGenerationEvent`.
 See [the API guide](https://rebyte.ai/docs/agents-api/workflow-agents).
+
+
+### Schedules
+
+`client.schedules` manages independent API schedules targeting an ordinary Agent
+or an explicit published Workflow version. Ordinary Agent targets require
+`session_mode: 'continuous' | 'isolated'`. Each trigger has its own run record;
+continuous schedules retain one Session across Turns.
+
+```ts
+const schedule = await client.schedules.create({
+  name: 'Daily review',
+  target: { type: 'agent', agent_id: 'agent_...', session_mode: 'continuous', input: 'Review progress since the last run.' },
+  timing: { type: 'cron', expression: '0 9 * * *', timezone: 'Asia/Shanghai' },
+  paused: true,
+});
+const trigger = await client.schedules.trigger(schedule.id, { 'Idempotency-Key': 'review-1' });
+console.log(trigger.run_id); // Accepted asynchronously; poll runs until terminal.
+for await (const run of client.schedules.runs.list(schedule.id)) console.log(run.status, run.result);
+```
+
+Use `retrieve`, `update`, `pause`, `resume`, `resetSession`, and `delete` for the
+schedule, and `runs.retrieve`, `runs.list`, `runs.cancel` for executions. Targets
+are immutable. Reset preserves the old Session and files. Deletion preserves run
+history. Mutating calls that could create work do not automatically retry by
+default; reuse `Idempotency-Key` when retrying a manual trigger.
+
+Schedules allow at most **100 total admitted runs** (default `max_runs: 100`) and
+recurring clock times at least **5 minutes apart**. Manual and failed runs consume
+the cap; skipped triggers do not. Resetting a Session never resets the run count.
+See [Schedules](https://rebyte.ai/docs/agents-api/schedules) for timing and lifetime semantics.

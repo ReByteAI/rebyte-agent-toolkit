@@ -32,3 +32,5 @@ export { OpenAIError as RebyteError } from './core/error';
 export { rebyteSandbox, type RebyteSandbox, type RebyteSandboxOptions } from './rebyte-sandbox';
 
 export * from './resources/workflow-agents/index';
+
+export * from './resources/schedules/index';

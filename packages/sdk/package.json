@@ -1,6 +1,6 @@
 {
   "name": "@rebyteai/agent-sdk",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Rebyte Agents API client, forked from the OpenAI TypeScript SDK",
   "author": "Rebyte",
   "types": "dist/index.d.ts",

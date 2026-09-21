@@ -1979,6 +1979,8 @@ export class OpenAI {
   beta: API.Beta = new API.Beta(this);
   /** Create, test, publish and execute fixed JavaScript workflows on Rebyte. */
   workflowAgents: API.WorkflowAgents = new API.WorkflowAgents(this);
+  /** Schedule ordinary Agents or published Workflow versions independently of their definitions. */
+  schedules: API.Schedules = new API.Schedules(this);
   /**
    * Create large batches of API requests to run asynchronously.
    */
