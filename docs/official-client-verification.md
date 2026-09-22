@@ -1,8 +1,9 @@
 # Official client migration verification
 
 Verified locally on 2026-09-22 against the development Rebyte Agents API with
-`openai@7.15.0`. This records the 0.3.0 source candidate, not a published npm
-release or a production deployment.
+`openai@7.15.0`. The source checks below preceded publication; the release
+verification section records the published npm artifacts. No Rebyte backend
+deployment was made.
 
 ## Dependency and package checks
 
@@ -64,3 +65,24 @@ node examples/agents-api/schedules.mjs
 
 See the [recipe guide](../examples/agents-api/README.md) for chat/function commands
 and [release procedure](releases.md) for package bootstrap and publication.
+
+## npm release verification
+
+Published all five packages at `0.3.0` on 2026-09-22: `agent-extensions`,
+`agent-server`, `agent-react`, `agent-ui`, and `cli` under the `@rebyteai` scope.
+The release source is commit `06a31fb83de72b915b14c6d529e9c9a2ae9a0b5d`, tagged
+[`v0.3.0`](https://github.com/ReByteAI/rebyte-agent-toolkit/releases/tag/v0.3.0).
+The [release workflow](https://github.com/ReByteAI/rebyte-agent-toolkit/actions/runs/35680904713)
+passed; its archives matched the local reviewed candidates byte for byte.
+
+Installed all five exact versions from the public npm registry into a fresh
+directory. Verified each published SHA-512 integrity against its candidate,
+ESM/CommonJS exports where supported, the official client's extension composition,
+and CLI version `0.3.0`. The installation contains `openai@7.15.0` and no
+`@rebyteai/agent-sdk` fork.
+
+The extension's first version was bootstrapped with npm account authentication;
+the existing four packages used GitHub OIDC. Configuring the new extension's
+trusted publisher still requires completing npm's separate account verification
+before its next release. The attempted verification expired; it did not change
+that setting. See [release setup](releases.md#subsequent-releases-through-github-actions).
