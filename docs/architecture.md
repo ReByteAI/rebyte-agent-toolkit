@@ -1,6 +1,9 @@
 # Architecture
 
-The Rebyte Agent SDK fork is the wire client. Rebyte owns execution and durable state.
+The official `openai` package is the wire client. Rebyte owns execution and durable state.
+AppKit and the CLI configure the Rebyte endpoint explicitly. The optional
+`@rebyteai/agent-extensions` package adds Workflow and Schedule resources using
+the same client, without subclassing or vendoring it.
 
 ```text
 agent.toml → CLI → saved Agent

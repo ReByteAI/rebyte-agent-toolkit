@@ -1,11 +1,11 @@
-// Rebyte SDK. Every run owns and deletes its Agent and Session.
+// Official OpenAI SDK against Rebyte. Every run owns and deletes its Agent and Session.
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
-import Rebyte, { rebyteSandbox } from '@rebyteai/agent-sdk'
+import OpenAI from 'openai'
 const mode = process.argv[2] ?? 'chat'
 if (!['chat', 'functions', 'deferred-functions', 'hosted'].includes(mode)) throw new Error('Choose chat, functions, deferred-functions, or hosted')
 const usesFunctions = mode === 'functions' || mode === 'deferred-functions'
-const client = new Rebyte({ apiKey: process.env.REBYTE_API_KEY,
+const client = new OpenAI({ apiKey: process.env.REBYTE_API_KEY, baseURL: process.env.REBYTE_BASE_URL ?? 'https://api.rebyte.ai/v1',
   maxRetries: 0 })
 const sessions = client.beta.agents.sessions
 let agent, session
@@ -22,7 +22,7 @@ try {
     ? 'Call lookup_order for order demo-001 and report its delivery code.'
     : 'Read /workspace/input.txt using exec_command, then use apply_patch to create /workspace/outputs/result.txt with exactly the same bytes (one line, exactly one trailing newline, no blank lines). Run cmp /workspace/input.txt /workspace/outputs/result.txt to verify the bytes; correct any mismatch before finishing. Report the file contents.'
   session = await sessions.create({ agent_id: agent.id, input,
-    ...(mode === 'hosted' ? { environment: rebyteSandbox({ files: [{ type: 'inline', path: '/workspace/input.txt', data: Buffer.from('RECIPE_FILE_OK\n').toString('base64') }] }) } : {}),
+    ...(mode === 'hosted' ? { environment: { type: 'openai_hosted', files: [{ type: 'inline', path: '/workspace/input.txt', data: Buffer.from('RECIPE_FILE_OK\n').toString('base64') }] } } : {}),
   })
   // Durable polling is also useful after an SSE disconnect. It never resubmits input.
   const deadline = Date.now() + 300_000

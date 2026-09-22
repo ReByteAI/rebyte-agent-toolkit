@@ -1,7 +1,6 @@
-# Rebyte Agent SDK recipes
+# Agents API recipes
 
-These scripts use `@rebyteai/agent-sdk`, our source fork of the OpenAI Agents API client, without React packages. No base URL is needed for Rebyte. They
-exercise the API end to end and clean up their own Agent and Session in `finally`.
+These scripts use the official `openai@7.15.0` client with `REBYTE_API_KEY` and an explicit Rebyte endpoint (`REBYTE_BASE_URL`, default `https://api.rebyte.ai/v1`). Workflow recipes additionally use `@rebyteai/agent-extensions`. Build this workspace before running the source examples.
 
 ```sh
 # From the repository root:
@@ -88,7 +87,7 @@ const session = await client.beta.agents.sessions.create({ agent_id: agent.id,
 });
 ```
 
-`client` is the configured Rebyte SDK client; `accessToken` is obtained and
+`client` is the configured official OpenAI client; `accessToken` is obtained and
 authorized by your server. No environment is supplied. See
 [MCP](https://rebyte.ai/docs/agents-api/tools/mcp) and
 [Vaults](https://rebyte.ai/docs/agents-api/tools/vaults) for reusable credentials,
@@ -114,7 +113,7 @@ installed `SKILL.md` and follows its commands using `exec_command`; there are no
 separate List Skill or Run Skill tools. The [Commerce converter](https://github.com/ReByteAI/commerce-agent-starter/blob/main/examples/retail/api/rebyte_config.py)
 shows how to package checked-in Skills. Rebyte's GitHub source variant is an
 [extension](https://rebyte.ai/docs/agents-api/environments/openai-hosted), outside
-the upstream OpenAI skill union; the Rebyte SDK includes this variant.
+the upstream OpenAI skill union; use an explicitly typed HTTP request for this Rebyte extension.
 
 ## References
 
@@ -128,16 +127,16 @@ The protocol name `openai_hosted` means Rebyte-hosted compute at the Rebyte endp
 
 ## Dynamic Workflow
 
-SDK 0.2.3 and later supports `{ type: 'dynamic_workflow' }`. It lets the Session
+Rebyte supports `{ type: 'dynamic_workflow' }` as an Agents API extension. The JavaScript recipe uses the official client. It lets the Session
 model generate JavaScript that composes its server-side tools. The runnable
 example uses service MCP, without allocating a Session VM, and deletes its
 Session after streaming the answer.
 
-Build the SDK and use a Rebyte organization API key with `tasks:read` and
+Build the extension package and use a Rebyte organization API key with `tasks:read` and
 `tasks:write`:
 
 ```sh
-pnpm --filter @rebyteai/agent-sdk build
+pnpm --filter @rebyteai/agent-extensions build
 export REBYTE_API_KEY='rbk_...'
 pnpm --filter @rebyte/example-agents-api dynamic-workflow
 ```
@@ -150,12 +149,12 @@ ordinary Agent loop. See [the example](dynamic-workflow.mjs) and the
 ## Workflow Agents
 
 These recipes use `client.workflowAgents`, currently available from **GitHub
-source**, not the published 0.2.3 npm package. Build this checkout first. They use
+source** and the optional `@rebyteai/agent-extensions` package. Build this checkout first. They use
 the default production endpoint (or `REBYTE_BASE_URL`), need `tasks:read` and
 `tasks:write`, and delete only the Agents and runs they create in `finally`.
 
 ```sh
-pnpm --filter @rebyteai/agent-sdk build
+pnpm --filter @rebyteai/agent-extensions build
 export REBYTE_API_KEY='rbk_...'
 pnpm --filter @rebyte/example-agents-api workflow-agent
 pnpm --filter @rebyte/example-agents-api workflow-generate
@@ -198,5 +197,12 @@ Keep idempotency keys stable when retrying an execution. Breaking out of the
 original execution stream cancels that run; to observe without owning execution,
 use `client.workflowAgents.runs.events.stream(runId, { after: sequence })`. Keep
 `sequence` as a string. Delete terminal runs separately from Agents to clean up
-their tool environments. See the [SDK reference](../../packages/sdk/README.md#workflow-agents-github-source)
+their tool environments. See the [Extension reference](../../packages/extensions/README.md#workflow-agents)
 and [Workflow Agents guide](https://rebyte.ai/docs/agents-api/workflow-agents).
+
+## Schedules
+
+`node examples/agents-api/schedules.mjs` verifies the extension's Schedule API
+against a published fixed Workflow: paused creation, idempotent manual trigger,
+run retrieval, exact result and one-run cap. It archives its test schedule and
+deletes its Workflow fixtures. It does not leave an automatic timer.

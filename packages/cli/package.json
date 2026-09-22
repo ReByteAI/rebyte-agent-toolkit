@@ -1,6 +1,6 @@
 {
   "name": "@rebyteai/cli",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Create and manage Rebyte Agents from agent.toml",
   "license": "MIT",
   "repository": {
@@ -22,7 +22,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc --noEmit && esbuild src/cli.ts --bundle --external:@rebyteai/agent-sdk --platform=node --format=esm --target=node22 --outfile=dist/cli.js --banner:js='#!/usr/bin/env node' && chmod +x dist/cli.js",
+    "build": "tsc --noEmit && esbuild src/cli.ts --bundle --external:openai --platform=node --format=esm --target=node22 --outfile=dist/cli.js --banner:js='#!/usr/bin/env node' && chmod +x dist/cli.js",
     "prepack": "pnpm run build",
     "smoke": "node scripts/smoke.mjs",
     "typecheck": "tsc --noEmit"
@@ -42,7 +42,7 @@
     "ajv-formats": "3.0.1",
     "smol-toml": "^1.8.0",
     "zod": "^3.25.76",
-    "@rebyteai/agent-sdk": "workspace:*"
+    "openai": "7.15.0"
   },
   "devDependencies": {
     "esbuild": "^0.27.2"

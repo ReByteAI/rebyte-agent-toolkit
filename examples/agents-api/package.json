@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@rebyteai/agent-sdk": "workspace:*"
+    "openai": "7.15.0",
+    "@rebyteai/agent-extensions": "workspace:*"
   },
   "scripts": {
     "chat": "node run.mjs chat",

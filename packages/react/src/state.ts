@@ -1,4 +1,4 @@
-import type { AgentSessionEvent } from '@rebyteai/agent-sdk/resources/beta/agents/agents'
+import type { AgentSessionEvent } from 'openai/resources/beta/agents/agents'
 export interface AgentAttachment {
   fileId: string
   filename: string

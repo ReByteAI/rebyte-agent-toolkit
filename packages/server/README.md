@@ -3,7 +3,7 @@
 Install the versioned package (no repository clone required):
 
 ```sh
-pnpm add @rebyteai/agent-server@0.2.0
+pnpm add @rebyteai/agent-server
 ```
 
 

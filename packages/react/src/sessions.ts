@@ -1,7 +1,7 @@
-import { Stream } from '@rebyteai/agent-sdk/core/streaming'
-import type { AgentSession, AgentSessionEvent, AgentSessionInputParam, AgentSessionItem } from '@rebyteai/agent-sdk/resources/beta/agents/agents'
-import type { Turn } from '@rebyteai/agent-sdk/resources/beta/agents/sessions/turns'
-import type { SessionArtifact } from '@rebyteai/agent-sdk/resources/beta/agents/sessions/artifacts'
+import { Stream } from 'openai/core/streaming'
+import type { AgentSession, AgentSessionEvent, AgentSessionInputParam, AgentSessionItem } from 'openai/resources/beta/agents/agents'
+import type { Turn } from 'openai/resources/beta/agents/sessions/turns'
+import type { SessionArtifact } from 'openai/resources/beta/agents/sessions/artifacts'
 import { AgentTransportError, createTurnState, type TurnState, type TextMessageState, type ToolCallState } from './state.js'
 import type { AgentAttachment, AgentUploadProgress } from './state.js'
 

@@ -1,7 +1,8 @@
-import Rebyte from '@rebyteai/agent-sdk';
+import OpenAI from 'openai';
 
-const client = new Rebyte({
-  baseURL: 'https://api.rebyte.ai/v1',
+const client = new OpenAI({
+  baseURL: process.env.REBYTE_BASE_URL ?? 'https://api.rebyte.ai/v1',
+  apiKey: process.env.REBYTE_API_KEY,
   maxRetries: 0,
 });
 

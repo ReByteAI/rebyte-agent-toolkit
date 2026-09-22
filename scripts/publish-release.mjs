@@ -8,7 +8,7 @@ const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 const directory = resolve(process.argv[2] || join(root, 'release'))
 const registry = 'https://registry.npmjs.org'
 const packages = [
-  ['@rebyteai/agent-sdk', 'rebyteai-agent-sdk'],
+  ['@rebyteai/agent-extensions', 'rebyteai-agent-extensions'],
   ['@rebyteai/agent-server', 'rebyteai-agent-server'],
   ['@rebyteai/agent-react', 'rebyteai-agent-react'],
   ['@rebyteai/agent-ui', 'rebyteai-agent-ui'],

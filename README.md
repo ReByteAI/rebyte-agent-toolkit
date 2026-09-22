@@ -1,148 +1,122 @@
 # Rebyte Agent Toolkit
 
-Build with **Rebyte Agent SDK**, our maintained source fork of the OpenAI
-Agents API TypeScript client. Use `client.beta.agents` with `REBYTE_API_KEY`;
-the SDK connects to Rebyte by default. Rebyte hosts the Agent Loop, models,
-Session Sandboxes and Artifacts. AppKit adds a configuration CLI, React hooks,
-chat UI, and Node and Cloudflare server integration.
+Use the official **`openai`** TypeScript package to call Rebyte's Agents API.
+Configure the Rebyte URL and API key explicitly. Rebyte runs the Agent Loop and
+owns Sessions, Sandboxes and Artifacts. This repository contains AppKit, the CLI,
+examples and a small package for Rebyte-only APIs; it does not vendor the OpenAI client.
+
+```sh
+pnpm add openai@7.15.0
+export REBYTE_API_KEY="rbk_..."
+```
 
 ```ts
-import Rebyte, { rebyteSandbox } from '@rebyteai/agent-sdk'
-const client = new Rebyte()
+import OpenAI from 'openai'
+
+const client = new OpenAI({
+  apiKey: process.env.REBYTE_API_KEY,
+  baseURL: 'https://api.rebyte.ai/v1',
+  maxRetries: 0,
+})
 const agent = await client.beta.agents.create({
   name: 'My assistant', model: 'gpt-5.6-luna', instructions: 'Answer clearly.',
 })
 const session = await client.beta.agents.sessions.create({
-  agent_id: agent.id, environment: rebyteSandbox(),
+  agent_id: agent.id, environment: { type: 'openai_hosted' },
 })
 ```
 
-See [the SDK package](packages/sdk/README.md) and
-[upstream provenance](packages/sdk/UPSTREAM.md). Compatibility refers to the
-OpenAI Agents **API client**, not the separate `@openai/agents` Agent Loop library.
+The `openai_hosted` wire value selects Rebyte compute at this endpoint. Omit the
+environment for chat and service tools without a Sandbox. The official client adds
+the Agents beta header and handles streaming, pagination and API errors.
+The checked dependency is `openai@7.15.0`; compatibility with newer releases must
+be verified before changing the pin. See the [API guide](https://rebyte.ai/docs/agents-api/overview)
+for supported features. Using the official package does not enable unsupported endpoints.
 
-Start with the [Rebyte guide](https://rebyte.ai/docs/agents-api/quickstart) and
-[OpenAI Agents API reference](https://developers.openai.com/api/docs/guides/agents-api/overview).
-Use Rebyte's guide for supported features and Rebyte-specific behavior.
+## AppKit
 
-## Install a release
+AppKit connects React to the same Agents API through an application server:
 
-Use Node.js 22+. You do not need to clone this repository to use the SDK.
-Install the current release package in your application:
-
-```sh
-pnpm add @rebyteai/agent-sdk
-export REBYTE_API_KEY='rbk_...'
+```text
+React UI → application server → official openai client → Rebyte Agents API
 ```
 
-For AppKit, install the components your application uses:
+The server holds the organization key and forwards native Session events. React
+uses the official event types and SSE parser to maintain UI state. The Agent Loop
+runs in Rebyte; AppKit does not need the separate `@openai/agents` execution library.
 
-```sh
-pnpm add @rebyteai/agent-react @rebyteai/agent-ui @rebyteai/agent-server
-```
-
-Dependencies between Rebyte packages are pinned to the same release and installed
-automatically. React/React DOM are supplied by your application. Server-only
-applications need only the API SDK; UI components are optional.
-
-For the CLI:
-
-```sh
-pnpm add -D @rebyteai/cli
-pnpm exec rebyte --help
-```
-
-Packages are published on npm. [GitHub Releases](https://github.com/ReByteAI/rebyte-agent-toolkit/releases/latest)
-provide release notes and matching archives with SHA-256 checksums.
-
-## Run or modify the examples
-
-Clone the repository only when you want the complete example applications or to
-contribute source changes.
-
-Node.js 22+, pnpm 10:
-
-```sh
-pnpm install
-pnpm build
-```
-
-| Example | What you learn |
+| Package | Purpose |
 | --- | --- |
-| [Rebyte SDK recipes](examples/agents-api/README.md) | Create an Agent and Session; no-Sandbox chat; eager/deferred client functions; files and Artifacts; cleanup |
-| [Workflow Agents](examples/agents-api/README.md#workflow-agents) | Generate or write fixed JavaScript, preview, test, publish, stream runs, use MCP and manage versions (GitHub source; not yet in npm 0.2.3) |
-| [Node App Kit](examples/react-chat/README.md) | Streaming React chat, upload, downloads, cancellation, reload and Session isolation |
-| [Cloudflare App Kit](examples/cloudflare-app-kit/README.md) | The same server adapter and UI on a Worker |
-| [Commerce](https://github.com/ReByteAI/commerce-agent-starter/tree/main/rebyte) | Python host executes catalog/cart/presentation functions and installs per-Session Skills |
+| `openai` | Official API client, installed directly from npm. |
+| `@rebyteai/agent-server` | Shared Hono proxy for Node and Cloudflare. |
+| `@rebyteai/agent-react` | Session transport and React state. |
+| `@rebyteai/agent-ui` | Optional chat interface and styles. |
+| `@rebyteai/cli` | Manage saved Agents from `agent.toml` using the official client. |
+| `@rebyteai/agent-extensions` | Workflow and Schedule resources using an existing official client. |
 
-## Configuration and execution
+Version 0.3.0 uses the official client. Existing 0.2.x releases still contain the
+old fork. See [migration](docs/migration.md).
 
-Create a saved Agent once, then reuse its `agent_...` ID for new Sessions.
-`model` is a model ID, never an Agent ID. A Session snapshots its Agent settings;
-updating the saved Agent affects future Sessions. API Agents are managed under
-Platform and have no product UI Agent Profile or Workspace binding.
-
-```toml
-# agent.toml
-name = "My assistant"
-model = "gpt-5.6-luna"
-instructions = "Answer clearly."
-tools = []
-```
+Install the AppKit components your application uses:
 
 ```sh
-export REBYTE_API_KEY='rbk_...'
-node packages/cli/dist/cli.js agent validate -f agent.toml
-# Alternatively, run the built CLI from the directory containing your manifest:
-node /path/to/rebyte-agent-toolkit/packages/cli/dist/cli.js agent create -f agent.toml
+pnpm add @rebyteai/agent-react@0.3.0 @rebyteai/agent-ui@0.3.0 @rebyteai/agent-server@0.3.0
+pnpm add -D @rebyteai/cli@0.3.0
 ```
 
-See the [CLI reference](packages/cli/README.md) for create, apply and export.
-Environment configuration, files and Skills belong to Session creation.
-No environment means no Sandbox and no filesystem tools. Service MCP, Web Search
-and client functions can still run. An explicit hosted environment adds
-`exec_command`, `write_stdin`, `apply_patch` and `view_image`; the Sandbox is
-created only on the first environment operation. Files and Artifacts are isolated
-per Session, even when two Sessions use the same saved Agent.
-
-## React and server packages
-
-```tsx
-import { createAgentSessionTransport, useAgentSession } from '@rebyteai/agent-react'
-import { AgentChatView } from '@rebyteai/agent-ui'
-import '@rebyteai/agent-ui/styles.css'
-
-// Create once outside the component so subscriptions survive renders.
-const transport = createAgentSessionTransport({ url: '/api/sessions' })
-export function Chat() {
-  const chat = useAgentSession({ transport })
-  return <AgentChatView chat={chat} />
-}
-```
-
-`@rebyteai/agent-server` supplies the shared Hono example proxy. The browser never
-receives the organization key. Authenticate users and enforce ownership of every
-Session on your server before public deployment: the example's fixed Agent check
-is not per-user authorization. See [architecture](docs/architecture.md).
-
-The React hook handles server tools and displays native events. It does not
-implement application-specific client functions; use the Rebyte SDK recipe or
-Commerce adapter for that host loop. [Package API](packages/react/README.md).
-
-## Validate changes
+To run the complete source templates:
 
 ```sh
-pnpm test             # SDK public exports/defaults and CLI protocol smoke checks
-pnpm typecheck
+# Node.js 22+, pnpm 10
+pnpm install --frozen-lockfile
 pnpm build
-APP_KIT_URL=http://127.0.0.1:4101 pnpm --filter @rebyte/example-react-chat test:live
+cp examples/react-chat/.env.example examples/react-chat/.env.local
+# Fill in REBYTE_API_KEY and REBYTE_AGENT_ID, then:
+pnpm dev
 ```
 
-Live tests use real models and compute, so the selected organization needs credit.
-[Recipes](examples/agents-api/README.md) create their own Agents and Sessions and
-delete them after checking results. App Kit's live test checks the configured
-saved Agent through the actual application proxy and deletes only its test Sessions.
+Create the saved Agent once with the [Node setup script](examples/react-chat/README.md)
+or [CLI](packages/cli/README.md). Use the [Cloudflare template](examples/cloudflare-app-kit/README.md)
+for a Worker. Keep API keys on the server and enforce user-to-Session ownership
+on every route before deploying the example to users.
 
-Release **v0.2.0** uses Agents API exclusively. Releases before v0.2.0 predate
-this API migration.
-The removed Responses hooks and old manifests require [migration](docs/migration.md).
+## Rebyte extensions
+
+Workflow Agents and Schedules are Rebyte-specific resources. They use a small
+extension package composed with your official client:
+
+```sh
+pnpm add openai@7.15.0 @rebyteai/agent-extensions@0.3.0
+```
+
+```ts
+import { RebyteExtensions } from '@rebyteai/agent-extensions'
+
+const rebyte = new RebyteExtensions(client)
+const schedules = await rebyte.schedules.list()
+// Standard APIs remain on client.beta.agents.
+```
+
+The extension neither replaces nor patches `OpenAI`. Its requests reuse your
+client's authentication, URL, fetch implementation, timeouts and API errors.
+Mutations that could start work default to no automatic retry. See
+[extension documentation](packages/extensions/README.md).
+
+## Examples and checks
+
+| Example | Coverage |
+| --- | --- |
+| [Agents API recipes](examples/agents-api/README.md) | Official-client chat, host functions, Sandbox files, and Rebyte extensions. |
+| [Node AppKit](examples/react-chat/README.md) | Streaming, uploads, downloads, cancellation and reload. |
+| [Cloudflare AppKit](examples/cloudflare-app-kit/README.md) | Same server adapter in a Worker. |
+| [Commerce](https://github.com/ReByteAI/commerce-agent-starter/tree/main/rebyte) | Python host executes catalog/cart/presentation functions through the same API. |
+
+```sh
+pnpm typecheck
+pnpm test
+pnpm build
+APP_KIT_URL=http://127.0.0.1:4101 pnpm test:live
+```
+
+See [architecture](docs/architecture.md), [verification](docs/official-client-verification.md)
+and [release procedure](docs/releases.md).

@@ -1,6 +1,6 @@
 # Publishing packages
 
-npm is the installation channel. Publish SDK, server, React, UI and CLI in that
+npm is the installation channel. Publish extensions, server, React, UI and CLI in that
 order. All five packages use the same version. GitHub Releases also provide the
 matching archives and checksums; consumers do not need to clone the repository.
 
@@ -20,7 +20,7 @@ node scripts/publish-release.mjs /tmp/rebyte-release
 ```
 
 Install all five released versions into a fresh directory from the public
-registry and verify SDK imports and CLI execution before announcing a release.
+registry and verify official-client and extension imports and CLI execution before announcing a release.
 The publication script checks registry SHA-512 integrity and can resume a partial
 release. It refuses to skip an existing version containing different bytes.
 
@@ -29,14 +29,14 @@ release. It refuses to skip an existing version containing different bytes.
 After the first publication, configure a trusted publisher for each package:
 
 ```sh
-for package in agent-sdk agent-server agent-react agent-ui cli; do
+for package in agent-extensions agent-server agent-react agent-ui cli; do
   pnpm exec npm trust github "@rebyteai/$package" \
     --file release.yml --repo ReByteAI/rebyte-agent-toolkit --allow-publish --yes
 done
 ```
 
 This registry configuration is a separate operation from committing the workflow;
-check `pnpm exec npm trust list @rebyteai/agent-sdk` (and the other four packages).
+check `pnpm exec npm trust list @rebyteai/agent-extensions` (and the other four packages).
 The workflow uses GitHub OIDC, with no stored npm token. See the
 [npm trusted publishing documentation](https://docs.npmjs.com/trusted-publishers/).
 
@@ -59,3 +59,12 @@ retrying; do not overwrite the tag or increment versions to bypass a scan.
 A manual dispatch uses package source from the existing release tag and the
 publishing helper from the immutable workflow revision. This allows a reviewed
 publication-check fix to finish an existing release without changing its archives.
+
+## 0.3.0 package transition
+
+The `packages/sdk` fork is removed. The new `@rebyteai/agent-extensions` package
+contains only Rebyte-specific resources and requires the official `openai` peer.
+Bootstrap its npm package and configure its trusted publisher before dispatching
+a release. Do not assume the old `agent-sdk` publisher grants access to this name.
+Existing `@rebyteai/agent-sdk` versions remain immutable; they are not republished
+or deleted. Publish the new packages before updating registry-install examples.

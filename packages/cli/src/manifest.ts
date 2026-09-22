@@ -4,7 +4,7 @@ import { parse, stringify } from 'smol-toml'
 import { z } from 'zod'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
-import type { Agent, AgentCreateParams } from '@rebyteai/agent-sdk/resources/beta/agents/agents'
+import type { Agent, AgentCreateParams } from 'openai/resources/beta/agents/agents'
 
 const record = z.record(z.unknown())
 const name = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/)

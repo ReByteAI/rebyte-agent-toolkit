@@ -1,8 +1,9 @@
-import Rebyte from '@rebyteai/agent-sdk'
+import OpenAI from 'openai'
+import { RebyteExtensions } from '@rebyteai/agent-extensions'
 
 // Each recipe owns its resources. Never enumerate and delete an organization's runs.
 export function workflowExample() {
-  const client = new Rebyte({ maxRetries: 0 })
+  const client = new RebyteExtensions(new OpenAI({ apiKey: process.env.REBYTE_API_KEY, baseURL: process.env.REBYTE_BASE_URL ?? 'https://api.rebyte.ai/v1', maxRetries: 0 }))
   const agents = new Set()
   const runs = new Set()
   const rememberAgent = agent => { agents.add(agent.id); return agent }

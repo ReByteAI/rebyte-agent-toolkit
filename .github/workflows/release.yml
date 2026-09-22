@@ -57,7 +57,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_TAG^{commit}")"
           version="${RELEASE_TAG#v}"
           test "$(node -p "require('./package.json').version")" = "$version"
-          for package in sdk server react ui cli; do
+          for package in extensions server react ui cli; do
             test "$(node -p "require('./packages/$package/package.json').version")" = "$version"
           done
       - name: Build release archives

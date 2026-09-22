@@ -2,7 +2,8 @@
 
 The Worker and [Node App Kit](../react-chat/README.md) mount the same
 `@rebyteai/agent-server`. Both use `useAgentSession`, native Agents events, Session
-files and immutable Artifacts. The lifecycle and feature limits are identical.
+files and immutable Artifacts. The lifecycle and feature limits are identical. The Worker uses the official
+`openai@7.15.0` client with an explicit Rebyte endpoint; the Agent Loop stays in Rebyte.
 
 ## Local development
 

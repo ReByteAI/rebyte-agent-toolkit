@@ -1,6 +1,6 @@
 {
   "name": "@rebyteai/agent-server",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "type": "module",
   "license": "MIT",
   "files": [
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "hono": "^4.9.9",
-    "@rebyteai/agent-sdk": "workspace:*"
+    "openai": "7.15.0"
   },
   "devDependencies": {
     "tsup": "^8.5.0",

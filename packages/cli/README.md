@@ -1,6 +1,6 @@
 # @rebyteai/cli
 
-Manage saved Agents through the Rebyte Agent SDK fork. Install the release in your project:
+Manage saved Agents through the official OpenAI client configured for Rebyte. Install the release in your project:
 
 ```sh
 pnpm add -D @rebyteai/cli
@@ -58,7 +58,7 @@ an absolute `cwd`. Skills, packages, files and network policy belong to the Sess
 previous settings. It does not modify existing Sessions. Export preserves native
 MCP definitions, omits redacted/null optional fields and removes stdio's derived
 connection origin. Literal JSON null in schemas or request metadata cannot be
-represented in TOML; export fails without writing. Use the Rebyte SDK for JSON.
+represented in TOML; export fails without writing. Use the official SDK for JSON.
 
 See [migration](../../docs/migration.md) for retired manifest fields. The Commerce
 repository has its own local business manifest and Python converter; that file is

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { workflowExample } from './workflow-helpers.mjs'
 
-// Fixed code: no model and no Sandbox. Run after building the SDK from this checkout.
+// Fixed code: no model and no Sandbox. Run after building the extension package from this checkout.
 const { client, rememberAgent, completed, consume, cleanup } = workflowExample()
 const definition = {
   code: `async (input, emit) => {

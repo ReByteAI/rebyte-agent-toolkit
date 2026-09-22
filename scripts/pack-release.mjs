@@ -13,7 +13,7 @@ mkdirSync(outputDirectory, { recursive: true })
 // Dependency order is also the npm publication order. pnpm pack converts
 // workspace:* to exact registry versions; never rewrite them to GitHub URLs.
 const packages = [
-  ['sdk/dist', '@rebyteai/agent-sdk', 'rebyteai-agent-sdk'],
+  ['extensions', '@rebyteai/agent-extensions', 'rebyteai-agent-extensions'],
   ['server', '@rebyteai/agent-server', 'rebyteai-agent-server'],
   ['react', '@rebyteai/agent-react', 'rebyteai-agent-react'],
   ['ui', '@rebyteai/agent-ui', 'rebyteai-agent-ui'],

@@ -1,0 +1,43 @@
+{
+  "name": "@rebyteai/agent-extensions",
+  "version": "0.3.0",
+  "description": "Rebyte Workflow and Schedule extensions for the official OpenAI SDK",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node checks/workflow-agents.mjs && tsc --noEmit --strict --skipLibCheck --target ES2022 --module NodeNext --moduleResolution NodeNext checks/workflow-agents-types.ts"
+  },
+  "peerDependencies": {
+    "openai": "7.15.0"
+  },
+  "devDependencies": {
+    "openai": "7.15.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ReByteAI/rebyte-agent-toolkit.git",
+    "directory": "packages/extensions"
+  }
+}

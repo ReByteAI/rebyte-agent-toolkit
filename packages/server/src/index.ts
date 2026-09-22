@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
-import Rebyte, { rebyteSandbox } from '@rebyteai/agent-sdk'
-import type { AgentSession, AgentSessionInputParam } from '@rebyteai/agent-sdk/resources/beta/agents/agents'
+import OpenAI from 'openai'
+import type { AgentSession, AgentSessionInputParam } from 'openai/resources/beta/agents/agents'
 
 export interface AgentAppOptions { apiKey: string; agentId: string; baseURL?: string | undefined }
 const maxFileSize = 5 * 1024 * 1024
@@ -11,7 +11,7 @@ const invalid = (message: string) => new HTTPException(400, { message })
 /** Same-origin example proxy. Mount behind your application's user authentication. */
 export function createAgentApp(options: AgentAppOptions) {
   if (!options.apiKey || !options.agentId) throw new Error('API key and Agent ID are required')
-  const client = new Rebyte({ apiKey: options.apiKey, baseURL: options.baseURL, maxRetries: 0 })
+  const client = new OpenAI({ apiKey: options.apiKey, baseURL: options.baseURL ?? 'https://api.rebyte.ai/v1', maxRetries: 0 })
   const sessions = client.beta.agents.sessions
   const app = new Hono()
   async function owned(id: string): Promise<AgentSession> {
@@ -23,7 +23,7 @@ export function createAgentApp(options: AgentAppOptions) {
   app.post('/api/sessions', async c => {
     // This file-capable app explicitly requests an environment; no VM is
     // provisioned until a file operation or environment tool needs one.
-    const session = await sessions.create({ agent_id: options.agentId, environment: rebyteSandbox() })
+    const session = await sessions.create({ agent_id: options.agentId, environment: { type: 'openai_hosted' } })
     return c.json(session, 201)
   })
   app.get('/api/sessions/:id', async c => c.json(await owned(c.req.param('id'))))
@@ -109,7 +109,7 @@ export function createAgentApp(options: AgentAppOptions) {
   app.onError((error, c) => {
     if (error instanceof HTTPException) return c.json({ error: { message: error.message } }, error.status)
     if (error instanceof SyntaxError) return c.json({ error: { message: 'Invalid JSON' } }, 400)
-    if (error instanceof Rebyte.APIError) return c.json({ error: { message: error.message, code: error.code } }, (error.status >= 400 && error.status < 600 ? error.status : 502) as ContentfulStatusCode)
+    if (error instanceof OpenAI.APIError) return c.json({ error: { message: error.message, code: error.code } }, (error.status >= 400 && error.status < 600 ? error.status : 502) as ContentfulStatusCode)
     console.error('Agents app request failed', error)
     return c.json({ error: { message: 'The example server failed' } }, 500)
   })
